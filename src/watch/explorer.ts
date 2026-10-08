@@ -13,11 +13,20 @@ export interface ExplorerSeries {
   source: string;
   points: readonly { time: number; value: number }[];
 }
+export interface ExplorerExtensionMetadata {
+  id:string;
+  name:string;
+  publisher?:string;
+  version?:string;
+  icon?:string;
+  activeNow:boolean;
+}
 export interface ExplorerOptions {
   nonce: string;
   cspSource?: string;
   cpuSeries?: readonly ExplorerSeries[];
   ramSeries?: readonly ExplorerSeries[];
+  knownExtensions?: readonly ExplorerExtensionMetadata[];
 }
 const safe=(input:string)=>input.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const number=(v:number|undefined,unit='')=>v===undefined?'N/A':Math.round(v*10)/10+unit;
@@ -43,7 +52,18 @@ export function renderVillainsExplorer(session:WatchSession,options:ExplorerOpti
   const analysis=analyzeWatchSession(session);
   const cpu=(options.cpuSeries??[]).filter(s=>valid(s,'cpu'));
   const ram=(options.ramSeries??[]).filter(s=>valid(s,'ram'));
-  const names=[...new Map([...cpu,...ram].map(s=>[s.id,{id:s.id,name:s.name,confidence:s.confidence,color:seriesColor(s.id),icon:s.icon??''}])).values()];
+  const metadata=new Map((options.knownExtensions??[]).map(e=>[e.id.toLowerCase(),e]));
+  const names=[...new Map([...cpu,...ram].map(s=>{
+    const entry=metadata.get(s.id.toLowerCase());
+    return [s.id,{id:s.id,name:entry?.name??s.name,confidence:s.confidence,
+      color:seriesColor(s.id),icon:entry?.icon??s.icon??''}] as const;
+  })).values()];
+  const known=(options.knownExtensions??[]).slice(0,24);
+  const safeIcon=(icon?:string)=>icon&&/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(icon)
+    ? '<img class="exticon" alt="" src="'+safe(icon)+'">' : '<span class="fallback">◇</span>';
+  const inventory=known.map(entry=>'<div class="extension">'+safeIcon(entry.icon)+
+    '<div><strong>'+safe(entry.name)+'</strong><small>'+safe(entry.version??'Version unavailable')+
+    ' · '+(entry.activeNow?'Active now':'Inactive now')+'</small></div></div>').join('');
   // Data from the extension process is treated as untrusted before interpolation.
   const data=toJSON({
     host:{cpu:hostPoints(session,'cpuPercentOneCore'),ram:hostPoints(session,'rssMiB')},
@@ -55,7 +75,7 @@ export function renderVillainsExplorer(session:WatchSession,options:ExplorerOpti
   const nonce=safe(options.nonce);
   const csp=options.cspSource?'; img-src '+safe(options.cspSource)+' data:':'';
   const list=names.map(s=>'<button type="button" class="chip" data-id="'+safe(s.id)+'" aria-pressed="true">'+
-    '<span class="dot" style="--series-color:'+s.color+'"></span>'+safe(s.name)+'</button>').join('');
+    '<span class="dot" style="--series-color:'+s.color+'"></span>'+safeIcon(s.icon)+safe(s.name)+'</button>').join('');
   const card=(label:string,val:string,hint:string)=>'<article class="metric"><div class="label">'+safe(label)+'</div><strong>'+
     safe(val)+'</strong><small>'+safe(hint)+'</small></article>';
   const state=session.state==='recording'?'Recording / potentially interrupted':session.state;
@@ -70,7 +90,7 @@ main{max-width:1250px;margin:auto}header{display:flex;align-items:center;justify
 .hero{background:linear-gradient(115deg,rgba(121,111,252,.12),rgba(42,160,169,.04));border:1px solid var(--vscode-panel-border);border-radius:17px;padding:22px;margin-bottom:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin:16px 0 24px}.metric,.panel{border:1px solid var(--vscode-panel-border);border-radius:13px;background:var(--vscode-sideBar-background,var(--vscode-editor-background))}
 .metric{padding:17px;min-height:110px}.metric strong{font-size:24px;display:block;margin:8px 0 4px;letter-spacing:-.7px}.metric small{display:block;font-size:11px}.label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.panel{padding:19px;margin:15px 0}.panelhead{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px}.pill{font-size:11px;border-radius:99px;padding:5px 10px;background:rgba(139,157,255,.13);color:var(--vscode-foreground)}.toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:18px 0}.toolbar button,.chip{background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);border:1px solid var(--vscode-panel-border);border-radius:8px;padding:8px 12px;cursor:pointer}.toolbar button[aria-pressed=true],.chip[aria-pressed=true]{border-color:#8b9dff;box-shadow:inset 0 0 0 1px #8b9dff}.toolbar input{background:var(--vscode-input-background);color:var(--vscode-input-foreground);border:1px solid var(--vscode-input-border,var(--vscode-panel-border));padding:9px 11px;border-radius:8px;min-width:165px;flex:1;max-width:300px}.chips{display:flex;flex-wrap:wrap;gap:7px;margin:13px 0}.chip{font-size:12px;display:inline-flex;gap:7px;align-items:center}.chip[aria-pressed=false]{opacity:.5}.dot{height:10px;width:10px;background:var(--series-color);border-radius:50%}
+.panel{padding:19px;margin:15px 0}.panelhead{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px}.pill{font-size:11px;border-radius:99px;padding:5px 10px;background:rgba(139,157,255,.13);color:var(--vscode-foreground)}.toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:18px 0}.toolbar button,.chip{background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);border:1px solid var(--vscode-panel-border);border-radius:8px;padding:8px 12px;cursor:pointer}.toolbar button[aria-pressed=true],.chip[aria-pressed=true]{border-color:#8b9dff;box-shadow:inset 0 0 0 1px #8b9dff}.toolbar input{background:var(--vscode-input-background);color:var(--vscode-input-foreground);border:1px solid var(--vscode-input-border,var(--vscode-panel-border));padding:9px 11px;border-radius:8px;min-width:165px;flex:1;max-width:300px}.chips{display:flex;flex-wrap:wrap;gap:7px;margin:13px 0}.chip{font-size:12px;display:inline-flex;gap:7px;align-items:center}.chip[aria-pressed=false]{opacity:.5}.dot{height:10px;width:10px;background:var(--series-color);border-radius:50%}.exticon{width:20px;height:20px;object-fit:contain;border-radius:5px}.fallback{width:20px;height:20px;display:inline-grid;place-items:center;background:rgba(139,157,255,.15);border-radius:5px}.extension{display:flex;align-items:center;gap:10px;min-width:180px;max-width:250px}.extension strong{font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.extension small{display:block;font-size:10px}.inventory{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:13px;margin-top:14px}
 .graph{min-height:220px;position:relative}svg{width:100%;height:auto;max-height:290px;display:block;overflow:visible}svg path,svg polyline{vector-effect:non-scaling-stroke}.empty{border:1px dashed var(--vscode-panel-border);border-radius:10px;padding:22px;text-align:center;color:var(--vscode-descriptionForeground)}
 .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--vscode-descriptionForeground);margin-top:12px}.legend span{display:inline-flex;gap:6px;align-items:center}
 .legend b{height:3px;width:17px;display:inline-block;background:var(--series-color)}.note{font-size:12px;color:var(--vscode-descriptionForeground)}.tooltip{position:fixed;pointer-events:none;display:none;max-width:320px;padding:9px 12px;background:var(--vscode-editorHoverWidget-background,var(--vscode-sideBar-background));color:var(--vscode-editorHoverWidget-foreground,var(--vscode-foreground));border:1px solid var(--vscode-editorHoverWidget-border,var(--vscode-panel-border));border-radius:8px;font-size:12px;z-index:4;box-shadow:0 5px 20px #0005;white-space:pre-line}
@@ -100,6 +120,7 @@ ${names.length?'':'<p class="note">No extension-level evidence is attached to th
 <div class="graph" id="cpuChart"></div><div class="legend" id="cpuLegend"></div><p class="note" id="cpuNote"></p></section>
 <section class="panel" aria-labelledby="ramTitle"><div class="panelhead"><div><h2 id="ramTitle">Memory · RSS timeline</h2><div class="note">MiB. Extension-level RAM is not inferred from shared-process RSS.</div></div><span class="pill">RAM</span></div>
 <div class="graph" id="ramChart"></div><div class="legend" id="ramLegend"></div><p class="note" id="ramNote"></p></section>
+<section class="panel"><h2>Extensions installed now</h2><p class="note">Names, icons and activation state reflect the current VS Code window, not which extensions ran during this saved session. No per-extension resource figures are implied.</p><div class="inventory">${inventory||'<p class="note">No local extension metadata available.</p>'}</div></section>
 <section class="panel"><h2>Evidence & limitations</h2><div class="callout">A colorful chart is not a verdict. CPU profile sample-share is an estimate of sampled execution time, not measured CPU percent of one core. No RAM is assigned to individual extensions without a verified source.</div><ul>${notes}</ul></section>
 <div id="tooltip" class="tooltip" role="status" aria-live="polite"></div>
 </main><script nonce="${nonce}">
