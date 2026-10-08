@@ -53,6 +53,9 @@ export interface WorkspaceEvidence {
 }
 export interface SettingsEvidence {
   watcherExclude: Readonly<Record<string, boolean>>;
+  searchExclude?: Readonly<Record<string, boolean>>;
+  /** Logging configuration is not proof that tsserver is currently running or slow. */
+  tsServerLogLevel?: 'off' | 'normal' | 'verbose' | 'unknown';
 }
 export interface CollectorRecord {
   id: string;
@@ -83,6 +86,8 @@ export interface DiagnosticServices {
   /** All workspace roots; optional to keep existing injected service fixtures compatible. */
   workspaceRoots?(): readonly { scheme: string; fsPath: string }[];
   watcherExclude(): Readonly<Record<string, boolean>>;
+  searchExclude?(): Readonly<Record<string, boolean>>;
+  tsServerLogLevel?(): unknown;
   sampleProcess(cancelled: () => boolean): Promise<ProcessEvidence>;
   scanWorkspace(folder: string, cancelled: () => boolean, options: ScanOptions): Promise<ScanResult>;
 }

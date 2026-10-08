@@ -33,9 +33,11 @@ The existing smoke tests check packaging and manifest invariants; unit tests exe
 - Asynchronous streaming directory inspection (names/types only), with shared limits across multi-root workspaces: 2,500 entries, depth 5, and 2 seconds by default. Unreadable folders, symbolic links, and depth truncation are recorded without exposing paths.
 - Possible file-watching and search-exclusion opportunities, with hypotheses labeled as such.
 - Failures and collection limits, so an incomplete scan is not mistaken for a complete one.
-- Exportable JSON report through **Snail: Export Last Report**. Extension IDs, names and versions appear only inside the local Webview and are omitted from the export by default. Other privacy safeguards are tracked in #5.
+- Exportable JSON report through **Snail: Export Last Report**. The shareable file contains only known finding/suspect codes and numeric aggregates, with arbitrary evidence text, local extension IDs/versions, user paths, warnings and logs removed. Source evidence remains in the local view.
 
 The inventory is a point-in-time snapshot: changes made by installing, uninstalling or enabling extensions appear in the next diagnosis. The `extensionKind` is the logical UI/Workspace kind exposed by VS Code, **not** a definitive physical extension host location. `isActive` indicates activation, not performance or CPU usage.
+
+The settings checks use effective `files.watcherExclude`, `search.exclude` and TypeScript logging configuration. Missing exclusions and verbose logging produce **configuration hypotheses**, not measured file I/O, TypeScript Server CPU, or a finding of guilt.
 
 ## Cancellation and resource budgets
 

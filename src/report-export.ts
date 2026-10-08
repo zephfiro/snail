@@ -1,48 +1,91 @@
 import type { Report } from './core/contracts';
 
 /**
- * Shareable report is allowlisted: extension identifiers, display names and
- * versions are local-only. User-controlled error strings are excluded.
- * Further generic redaction is tracked in #5.
+ * Only static catalog identifiers and numeric aggregates leave the local view.
+ * A denylist of filesystem patterns cannot guarantee secret-free output:
+ * user/extension supplied free-text fields must never be copied to exports.
  */
-export function createShareableReport(report: Report): Omit<Report, 'extensionInventory'> {
+const findingsCatalog = {
+  'extension-host-cpu': 'Aggregate Extension Host CPU observation',
+  'extension-inventory': 'Extension inventory summary',
+  'workspace-generated-dirs': 'Generated-directory exclusion review',
+  'workspace-search-exclude': 'Generated-directory search exclusion review',
+  'tsserver-verbose-logging': 'TypeScript server logging configuration'
+} as const;
+const suspectCatalog = {
+  'extension-host-cpu': 'Aggregate Extension Host CPU hypothesis',
+  'generated-directories-watchers': 'Generated directory watcher hypothesis',
+  'tsserver-verbose-logging': 'TypeScript server verbose logging hypothesis'
+} as const;
+const collectors = new Set(['extensions', 'process', 'workspace', 'settings']);
+const categories = new Set(['extensions', 'process', 'workspace', 'settings']);
+const severities = new Set(['info', 'warning', 'critical']);
+const confidences = new Set(['measured', 'inferred', 'informational']);
+const statuses = new Set(['collected', 'unavailable', 'failed', 'skipped', 'timed_out']);
+const priorityValues = new Set(['investigate_first', 'possible', 'insufficient_evidence']);
+
+function safeNumber(value: number): number {
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+function safeDate(value: string): string {
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : '';
+}
+function safeVersion(value: string): string {
+  return /^\d+(?:\.\d+){1,3}(?:-[\w.-]{1,30})?$/.test(value) ? value : 'unknown';
+}
+
+/** An explicit, minimally useful export schema (no extension IDs, paths or raw messages). */
+export function createShareableReport(report: Report) {
   return {
-    schemaVersion: report.schemaVersion,
-    timestamp: report.timestamp,
+    schemaVersion: 1 as const,
+    timestamp: safeDate(report.timestamp),
     environment: {
-      vscodeVersion: report.environment.vscodeVersion,
-      platform: report.environment.platform,
-      remote: report.environment.remote
+      vscodeVersion: safeVersion(report.environment.vscodeVersion),
+      platform: ['linux', 'win32', 'darwin'].includes(report.environment.platform)
+        ? report.environment.platform : 'unknown',
+      remote: Boolean(report.environment.remote)
     },
     summary: {
-      installedExtensions: report.summary.installedExtensions,
-      activeExtensions: report.summary.activeExtensions,
-      scannedEntries: report.summary.scannedEntries,
-      limitReached: report.summary.limitReached
+      installedExtensions: safeNumber(report.summary.installedExtensions),
+      activeExtensions: safeNumber(report.summary.activeExtensions),
+      scannedEntries: safeNumber(report.summary.scannedEntries),
+      limitReached: Boolean(report.summary.limitReached)
     },
     ...(report.process ? {
       process: {
-        cpuPercentOneCore: report.process.cpuPercentOneCore,
-        rssMb: report.process.rssMb,
-        samplingMs: report.process.samplingMs,
-        scope: report.process.scope
+        cpuPercentOneCore: safeNumber(report.process.cpuPercentOneCore),
+        rssMb: safeNumber(report.process.rssMb),
+        samplingMs: safeNumber(report.process.samplingMs),
+        scope: 'Node Extension Host process aggregate; no per-extension attribution'
       }
     } : {}),
-    findings: report.findings.map(finding => ({
-      id: finding.id,
-      title: finding.title,
-      category: finding.category,
-      severity: finding.severity,
-      confidence: finding.confidence,
-      evidence: finding.evidence,
-      recommendation: finding.recommendation,
-      ...(finding.sources ? { sources: [...finding.sources] } : {})
-    })),
-    warnings: [],
-    collectors: report.collectors.map(item => ({
+    findings: report.findings
+      .filter(finding => Object.hasOwn(findingsCatalog,finding.id))
+      .map(finding => ({
+        id: finding.id,
+        title: findingsCatalog[finding.id as keyof typeof findingsCatalog],
+        category: categories.has(finding.category) ? finding.category : 'settings',
+        severity: severities.has(finding.severity) ? finding.severity : 'info',
+        confidence: confidences.has(finding.confidence) ? finding.confidence : 'informational',
+        evidence: 'Further details are available only in the local Snail Doctor panel.',
+        recommendation: 'Investigate the finding locally and collect only deliberately shared evidence.',
+        sources: (finding.sources ?? []).filter(source => collectors.has(source))
+      })),
+    suspects: (report.suspects ?? [])
+      .filter(suspect => Object.hasOwn(suspectCatalog,suspect.id))
+      .map(suspect => ({
+        id: suspect.id,
+        title: suspectCatalog[suspect.id as keyof typeof suspectCatalog],
+        priority: priorityValues.has(suspect.priority) ? suspect.priority : 'insufficient_evidence',
+        status: suspect.status === 'suspected' ? 'suspected' : 'insufficient_evidence',
+        note: 'This is a hypothesis, not a confirmed component-level root cause.'
+      })),
+    warnings: [] as string[],
+    collectors: report.collectors.filter(item => collectors.has(item.id)).map(item => ({
       id: item.id,
-      status: item.status,
-      durationMs: item.durationMs
+      status: statuses.has(item.status) ? item.status : 'failed',
+      durationMs: safeNumber(item.durationMs)
     }))
   };
 }
