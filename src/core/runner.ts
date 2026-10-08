@@ -51,15 +51,18 @@ export class DiagnosticRunner {
         collectors.push({ id: module.id, status: 'collected', durationMs: Math.max(0, context.now() - start) });
         warnings.push(...(collected.warnings ?? []));
       } catch (error) {
+        const wasCancelled = context.cancellation.isCancellationRequested;
         const unavailable = error instanceof CollectionUnavailable;
         collectors.push({
           id: module.id,
-          status: unavailable ? 'unavailable' : 'failed',
+          status: wasCancelled ? 'skipped' : unavailable ? 'unavailable' : 'failed',
           durationMs: Math.max(0, context.now() - start)
         });
         // Never leak filesystem paths, stack traces, or configuration secrets from arbitrary errors.
-        warnings.push(unavailable ? error.message : 'Collector ' + module.id + ' failed; other checks continued.');
-        if (context.cancellation.isCancellationRequested) cancelled = true;
+        if (!wasCancelled) {
+          warnings.push(unavailable ? error.message : 'Collector ' + module.id + ' failed; other checks continued.');
+        }
+        if (wasCancelled) cancelled = true;
       }
     }
 
