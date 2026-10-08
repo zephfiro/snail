@@ -43,3 +43,43 @@ test('renderReport shows findings and warnings with a restrictive CSP', () => {
   assert.doesNotMatch(html, /<svg/);
   assert.match(html, /&lt;svg/);
 });
+
+test('local extension inventory displays escaped metadata and activation without CPU attribution', () => {
+  const report = {
+    schemaVersion: 1, timestamp: '2026-10-08T12:00:00Z',
+    environment: { vscodeVersion: '1.94', platform: 'linux', remote: false },
+    summary: { installedExtensions: 1, activeExtensions: 1, scannedEntries: 0, limitReached: false },
+    findings: [], warnings: [], collectors: [],
+    extensionInventory: [
+      { id: 'private.<one>', displayName: '<img src=x onerror=alert(1)>',
+        version: '1.2.3<script>', isActive: true, isBuiltin: false, extensionKind: 'workspace' },
+      { id: 'vscode.git', displayName: 'Git', version: undefined,
+        isActive: false, isBuiltin: true, extensionKind: 'ui' }
+    ]
+  };
+  const html = renderReport(report);
+  assert.match(html, /Installed extensions \(2 total; 1 third-party\)/);
+  assert.match(html, /Activated/);
+  assert.match(html, /Not activated/);
+  assert.match(html, /Workspace kind/);
+  assert.match(html, /unknown/);
+  assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
+  assert.match(html, /private\.&lt;one&gt;/);
+  assert.doesNotMatch(html, /<img src=x|<script>/);
+  assert.match(html, /does not mean slow/);
+});
+
+test('large inventories are capped in the Webview without losing their total', () => {
+  const entries = Array.from({ length: 265 }, (_, n) => ({
+    id: 'publisher.extension' + n, displayName: 'Extension ' + n,
+    version: '1.0', isActive: false, isBuiltin: false, extensionKind: 'unknown'
+  }));
+  const html = renderReport({
+    schemaVersion: 1, timestamp: '2026-10-08T12:00:00Z',
+    environment: { vscodeVersion: '1.94', platform: 'linux', remote: false },
+    summary: { installedExtensions: 265, activeExtensions: 0, scannedEntries: 0, limitReached: false },
+    findings: [], warnings: [], collectors: [], extensionInventory: entries
+  });
+  assert.match(html, /Showing 250 of 265 entries/);
+  assert.doesNotMatch(html, /publisher.extension264/);
+});
