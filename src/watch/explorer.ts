@@ -38,7 +38,9 @@ export function seriesColor(id:string):string {
 }
 const valid=(series:ExplorerSeries,kind:'cpu'|'ram')=>
   (kind==='cpu'?series.unit==='cpu-profile-share':series.unit==='rss-mib') &&
-  series.confidence!=='unavailable' && series.points.length>0 &&
+  (kind==='cpu'?series.confidence==='estimated':
+    (series.confidence==='measured'&&series.source==='verified-dedicated-process')) &&
+  series.points.length>0 &&
   series.points.every(p=>Number.isFinite(p.time)&&Number.isFinite(p.value)&&p.time>=0&&p.value>=0);
 const toJSON=(value:unknown)=>JSON.stringify(value).replace(/[<>&\u2028\u2029]/g,c=>
   '\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));
@@ -63,7 +65,7 @@ export function renderVillainsExplorer(session:WatchSession,options:ExplorerOpti
     ? '<img class="exticon" alt="" src="'+safe(icon)+'">' : '<span class="fallback">◇</span>';
   const inventory=known.map(entry=>'<div class="extension">'+safeIcon(entry.icon)+
     '<div><strong>'+safe(entry.name)+'</strong><small>'+safe(entry.version??'Version unavailable')+
-    ' · '+(entry.activeNow?'Active now':'Inactive now')+'</small></div></div>').join('');
+    ' · '+(entry.activeNow?'Active now':'Inactive now')+' · RAM N/A</small></div></div>').join('');
   // Data from the extension process is treated as untrusted before interpolation.
   const data=toJSON({
     host:{cpu:hostPoints(session,'cpuPercentOneCore'),ram:hostPoints(session,'rssMiB')},
@@ -118,7 +120,7 @@ ${card('Gaps',String(analysis.gaps),'Not interpolated')}
 ${names.length?'':'<p class="note">No extension-level evidence is attached to this session. Use Import CPU Profile to add attributed sampling evidence; Snail never creates fake extension lines.</p>'}
 <section class="panel" aria-labelledby="cpuTitle"><div class="panelhead"><div><h2 id="cpuTitle">CPU · timeline</h2><div class="note">Host usage: % of one core. Extension profiles: % of sampled CPU stack time (separate scale).</div></div><span class="pill">CPU</span></div>
 <div class="graph" id="cpuChart"></div><div class="legend" id="cpuLegend"></div><p class="note" id="cpuNote"></p></section>
-<section class="panel" aria-labelledby="ramTitle"><div class="panelhead"><div><h2 id="ramTitle">Memory · RSS timeline</h2><div class="note">MiB. Extension-level RAM is not inferred from shared-process RSS.</div></div><span class="pill">RAM</span></div>
+<section class="panel" aria-labelledby="ramTitle"><div class="panelhead"><div><h2 id="ramTitle">Memory · RSS timeline</h2><div class="note">MiB. Extension RAM: N/A unless a separately verified dedicated process can be attributed.</div></div><span class="pill">RAM</span></div>
 <div class="graph" id="ramChart"></div><div class="legend" id="ramLegend"></div><p class="note" id="ramNote"></p></section>
 <section class="panel"><h2>Extensions installed now</h2><p class="note">Names, icons and activation state reflect the current VS Code window, not which extensions ran during this saved session. No per-extension resource figures are implied.</p><div class="inventory">${inventory||'<p class="note">No local extension metadata available.</p>'}</div></section>
 <section class="panel"><h2>Evidence & limitations</h2><div class="callout">A colorful chart is not a verdict. CPU profile sample-share is an estimate of sampled execution time, not measured CPU percent of one core. No RAM is assigned to individual extensions without a verified source.</div><ul>${notes}</ul></section>
