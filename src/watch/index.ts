@@ -16,3 +16,6 @@ export type { ImportedCpuProfile, ExtensionRoot, CpuProfileBucket } from './prof
 
 export { verifiedMemorySeries } from './memory';
 export type { MemoryAttribution } from './memory';
+
+export { computeVillainLeaderboard } from './leaderboard';
+export type { RankedExtension, VillainCards } from './leaderboard';
