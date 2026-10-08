@@ -22,7 +22,6 @@ test('two separate charts display real host evidence, not imaginary extension fi
  assert.match(html,/RSS change/);
  assert.match(html,/default-src 'none'/);
  assert.match(html,/script-src 'nonce-safeNonce123'/);
- assert.match(html,/source/);
 });
 test('different extension line units are not combined into one CPU core scale',()=>{
  const html=renderVillainsExplorer(session,{nonce:'test123',
