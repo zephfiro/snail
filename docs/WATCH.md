@@ -31,6 +31,8 @@ The line labeled **CPU profile sample-share** represents *the percentage of samp
 
 Security boundaries: import is manual and local; max file size **8 MiB**, duration **5 minutes**, at most **200k samples**, **100k nodes**, **600 buckets**, and **80 attributed extensions**. The raw profile (including function names, stack URLs and paths) is **never stored** or exported; the session stores only bounded extension IDs, aggregate sample counts, and bucket shares. Session metadata is private local storage and should not be shared blindly. The original profile remains where the user saved it.
 
+A separate `MemoryAttribution` contract accepts memory only when an adapter has independently verified **exclusive ownership of a dedicated OS process** by one extension, with process identity and real RSS measurements. The public VS Code API does **not** currently provide such an adapter, so RAM by extension is correctly displayed as **N/A**, even when icon/name metadata is available. A configured process shared by two extensions is not attributable.
+
 Profiles do **not** contain extension-specific RSS/heap ownership. Consequently the RAM chart will continue to show host RSS and mark extension RAM **unavailable** until a genuinely attributable source can be implemented.
 
 ## Lifetime and limits
