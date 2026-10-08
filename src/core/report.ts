@@ -19,7 +19,10 @@ export function createReport(
       installedExtensions: extensions?.installedExtensions ?? 0,
       activeExtensions: extensions?.activeExtensions ?? 0,
       scannedEntries: workspace?.scan.entries ?? 0,
-      limitReached: workspace?.scan.limitReached ?? false
+      limitReached: workspace?.scan.limitReached ?? run.collectors.some(
+        collector => collector.id === 'workspace' &&
+          (collector.status === 'timed_out' || collector.status === 'skipped' || collector.status === 'failed')
+      )
     },
     ...(process ? { process } : {}),
     ...(extensions?.entries ? { extensionInventory: extensions.entries } : {}),
