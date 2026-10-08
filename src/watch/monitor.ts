@@ -11,7 +11,7 @@ export interface WatchClock {
   schedule(ms: number, callback: () => void): () => void;
 }
 
-export interface WatchEnvironment extends WatchSession['environment'] {}
+export type WatchEnvironment = WatchSession['environment'];
 type WatchStatus = (session: WatchSession | undefined) => void;
 export interface WatchMonitorConfig {
   store: WatchStorage;
