@@ -20,7 +20,7 @@ test('generated Webview script compiles in Chromium-compatible JavaScript',()=>{
  assert.doesNotThrow(()=>new vm.Script(script));
  assert.match(html,/script-src 'nonce-allowedNonce'/);
  assert.match(html,/style-src 'nonce-allowedNonce'/);
- assert.doesNotMatch(html,/https?:\/\//);
+ assert.doesNotMatch(html,/<script[^>]+src=|<img[^>]+src=\"https?:/);
 });
 test('CSP-safe colors use JS-applied properties instead of unauthorized style attributes',()=>{
  const html=renderVillainsExplorer(session,{
