@@ -1,5 +1,7 @@
 import type { WatchSession, WatchSample } from './types';
 import { analyzeWatchSession } from './analysis';
+import { computeVillainLeaderboard } from './leaderboard';
+import type { ImportedCpuProfile } from './profile';
 
 /** An extension-specific series MUST carry its own evidence source. */
 export interface ExplorerSeries {
@@ -24,6 +26,7 @@ export interface ExplorerExtensionMetadata {
 export interface ExplorerOptions {
   nonce: string;
   cspSource?: string;
+  cpuProfile?: ImportedCpuProfile;
   cpuSeries?: readonly ExplorerSeries[];
   ramSeries?: readonly ExplorerSeries[];
   knownExtensions?: readonly ExplorerExtensionMetadata[];
@@ -52,6 +55,7 @@ function hostPoints(session:WatchSession,metric:'cpuPercentOneCore'|'rssMiB') {
 }
 export function renderVillainsExplorer(session:WatchSession,options:ExplorerOptions):string {
   const analysis=analyzeWatchSession(session);
+  const board=computeVillainLeaderboard(options.cpuProfile);
   const cpu=(options.cpuSeries??[]).filter(s=>valid(s,'cpu'));
   const ram=(options.ramSeries??[]).filter(s=>valid(s,'ram'));
   const metadata=new Map((options.knownExtensions??[]).map(e=>[e.id.toLowerCase(),e]));
@@ -69,11 +73,54 @@ export function renderVillainsExplorer(session:WatchSession,options:ExplorerOpti
   // Data from the extension process is treated as untrusted before interpolation.
   const data=toJSON({
     host:{cpu:hostPoints(session,'cpuPercentOneCore'),ram:hostPoints(session,'rssMiB')},
-    cpu:cpu.map(s=>({...s,icon:undefined,points:s.points.slice(0,2000)})),
+    cpu:cpu.map(s=>({...s,name:metadata.get(s.id.toLowerCase())?.name??s.name,icon:undefined,points:s.points.slice(0,2000)})),
     ram:ram.map(s=>({...s,icon:undefined,points:s.points.slice(0,2000)})),
     names,
-    intervalMs:session.intervalMs
+    intervalMs:session.intervalMs,
+    ranking:board.ranking
   });
+  const byId=new Map([...cpu,...ram].map(s=>[s.id,s]));
+  const describe=(id:string)=>metadata.get(id.toLowerCase())?.name??byId.get(id)?.name??id;
+  const cpuCard=(title:string,entry:typeof board.cards.highestAverage|undefined,metric:string)=>{
+    const available=Boolean(entry);
+    const titleName=available?describe(entry!.id):'Unavailable';
+    const current=available?metadata.get(entry!.id.toLowerCase()):undefined;
+    return '<article class="metric standout"><div class="label">'+safe(title)+'</div><div class="cardperson">'+
+      (current?safeIcon(current.icon):'<span class="fallback">—</span>')+
+      '<strong>'+safe(titleName)+'</strong></div><span class="number">'+safe(metric)+'</span>'+
+      '<small>'+ (available
+        ? 'Estimated share of imported profile CPU samples · not CPU core utilization'
+        : 'Insufficient or unavailable extension-level evidence') +'</small>'+
+      (available?'<button class="investigate" data-investigate="'+safe(entry!.id)+'" type="button">Investigate →</button>':'')+
+      '</article>';
+  };
+  const cpuCards=
+    cpuCard('Highest avg CPU share',board.cards.highestAverage,
+      board.cards.highestAverage?number(board.cards.highestAverage.avgShare,'%'):'N/A')+
+    cpuCard('Highest CPU sample spike',board.cards.highestPeak,
+      board.cards.highestPeak?number(board.cards.highestPeak.peakShare,'%'):'N/A')+
+    cpuCard('Most high-share profile buckets',board.cards.mostHighShareBuckets,
+      board.cards.mostHighShareBuckets?String(board.cards.mostHighShareBuckets.highShareBuckets):'N/A')+
+    cpuCard('Investigate first',board.cards.investigateFirst,
+      board.cards.investigateFirst?'Unverified suspect':'Insufficient evidence');
+  const peakRam=[...ram].sort((a,b)=>Math.max(...b.points.map(p=>p.value))-Math.max(...a.points.map(p=>p.value)))[0];
+  const growthRam=[...ram].sort((a,b)=>
+    (b.points.at(-1)!.value-b.points[0].value)-(a.points.at(-1)!.value-a.points[0].value))[0];
+  const memoryCard=(label:string,entry:ExplorerSeries|undefined,value:string)=>
+    '<article class="metric standout"><div class="label">'+safe(label)+'</div>'+
+    '<div class="cardperson">'+(entry?safeIcon(metadata.get(entry.id.toLowerCase())?.icon):'<span class="fallback">—</span>')+
+    '<strong>'+safe(entry?describe(entry.id):'Unavailable')+'</strong></div>'+
+    '<span class="number">'+safe(value)+'</span><small>'+
+    (entry?'Measured on independently verified dedicated process':'No per-extension RAM measurements; host RSS is shared')+
+    '</small></article>';
+  const memoryCards=memoryCard('Highest RAM',peakRam,peakRam?number(Math.max(...peakRam.points.map(p=>p.value)),' MiB'):'N/A')+
+    memoryCard('Fastest RAM growth',growthRam,growthRam?number(growthRam.points.at(-1)!.value-growthRam.points[0].value,' MiB'):'N/A');
+  const rows=board.ranking.map(entry=>'<tr data-id="'+safe(entry.id)+'" data-avg="'+entry.avgShare+
+    '" data-peak="'+(entry.peakShare??0)+'" data-buckets="'+entry.highShareBuckets+'">'+
+    '<th scope="row"><div class="cardperson">'+safeIcon(metadata.get(entry.id.toLowerCase())?.icon)+
+    '<span>'+safe(describe(entry.id))+'</span></div></th><td>'+number(entry.avgShare,'%')+
+    '</td><td>'+number(entry.peakShare,'%')+'</td><td>'+entry.highShareBuckets+
+    '</td><td>N/A</td><td>'+safe(entry.confidence)+'</td></tr>').join('');
   const nonce=safe(options.nonce);
   const csp=options.cspSource?'; img-src '+safe(options.cspSource)+' data:':'';
   const list=names.map(s=>'<button type="button" class="chip" data-id="'+safe(s.id)+'" aria-pressed="true">'+
@@ -91,8 +138,8 @@ export function renderVillainsExplorer(session:WatchSession,options:ExplorerOpti
 main{max-width:1250px;margin:auto}header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}h1{font-size:26px;letter-spacing:-.7px;margin:0}h2{font-size:16px;margin:0 0 8px}.muted,.label,small{color:var(--vscode-descriptionForeground)}.eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8b9dff;font-weight:700}
 .hero{background:linear-gradient(115deg,rgba(121,111,252,.12),rgba(42,160,169,.04));border:1px solid var(--vscode-panel-border);border-radius:17px;padding:22px;margin-bottom:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin:16px 0 24px}.metric,.panel{border:1px solid var(--vscode-panel-border);border-radius:13px;background:var(--vscode-sideBar-background,var(--vscode-editor-background))}
-.metric{padding:17px;min-height:110px}.metric strong{font-size:24px;display:block;margin:8px 0 4px;letter-spacing:-.7px}.metric small{display:block;font-size:11px}.label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.panel{padding:19px;margin:15px 0}.panelhead{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px}.pill{font-size:11px;border-radius:99px;padding:5px 10px;background:rgba(139,157,255,.13);color:var(--vscode-foreground)}.toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:18px 0}.toolbar button,.chip{background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);border:1px solid var(--vscode-panel-border);border-radius:8px;padding:8px 12px;cursor:pointer}.toolbar button[aria-pressed=true],.chip[aria-pressed=true]{border-color:#8b9dff;box-shadow:inset 0 0 0 1px #8b9dff}.toolbar input{background:var(--vscode-input-background);color:var(--vscode-input-foreground);border:1px solid var(--vscode-input-border,var(--vscode-panel-border));padding:9px 11px;border-radius:8px;min-width:165px;flex:1;max-width:300px}.chips{display:flex;flex-wrap:wrap;gap:7px;margin:13px 0}.chip{font-size:12px;display:inline-flex;gap:7px;align-items:center}.chip[aria-pressed=false]{opacity:.5}.dot{height:10px;width:10px;background:var(--series-color);border-radius:50%}.exticon{width:20px;height:20px;object-fit:contain;border-radius:5px}.fallback{width:20px;height:20px;display:inline-grid;place-items:center;background:rgba(139,157,255,.15);border-radius:5px}.extension{display:flex;align-items:center;gap:10px;min-width:180px;max-width:250px}.extension strong{font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.extension small{display:block;font-size:10px}.inventory{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:13px;margin-top:14px}
+.metric{padding:17px;min-height:110px}.metric strong{font-size:24px;display:block;margin:8px 0 4px;letter-spacing:-.7px}.standout{min-height:175px}.standout strong{font-size:13px;letter-spacing:0;margin:0;word-break:break-word}.standout .number{display:block;font-size:20px;font-weight:750;margin:10px 0 4px}.cardperson{display:flex;align-items:center;gap:9px;margin:12px 0 6px}.investigate{margin-top:12px;background:transparent;color:var(--vscode-textLink-foreground,#8b9dff);border:0;cursor:pointer;padding:5px 0;font-size:12px}.investigate:hover{text-decoration:underline}.metric small{display:block;font-size:11px}.label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.panel{padding:19px;margin:15px 0}.panelhead{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px}.pill{font-size:11px;border-radius:99px;padding:5px 10px;background:rgba(139,157,255,.13);color:var(--vscode-foreground)}.toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:18px 0}.toolbar button,.chip{background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground);border:1px solid var(--vscode-panel-border);border-radius:8px;padding:8px 12px;cursor:pointer}.toolbar button[aria-pressed=true],.chip[aria-pressed=true]{border-color:#8b9dff;box-shadow:inset 0 0 0 1px #8b9dff}.toolbar input{background:var(--vscode-input-background);color:var(--vscode-input-foreground);border:1px solid var(--vscode-input-border,var(--vscode-panel-border));padding:9px 11px;border-radius:8px;min-width:165px;flex:1;max-width:300px}.chips{display:flex;flex-wrap:wrap;gap:7px;margin:13px 0}.chip{font-size:12px;display:inline-flex;gap:7px;align-items:center}.chip[aria-pressed=false]{opacity:.5}.dot{height:10px;width:10px;background:var(--series-color);border-radius:50%}.exticon{width:20px;height:20px;object-fit:contain;border-radius:5px}.fallback{width:20px;height:20px;display:inline-grid;place-items:center;background:rgba(139,157,255,.15);border-radius:5px}.extension{display:flex;align-items:center;gap:10px;min-width:180px;max-width:250px}.extension strong{font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.extension small{display:block;font-size:10px}.inventory{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:13px;margin-top:14px}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--vscode-panel-border)}td{font-variant-numeric:tabular-nums}th .cardperson{margin:0}select{background:var(--vscode-dropdown-background);color:var(--vscode-dropdown-foreground);border:1px solid var(--vscode-dropdown-border,var(--vscode-panel-border));border-radius:6px;padding:8px}
 .graph{min-height:220px;position:relative}svg{width:100%;height:auto;max-height:290px;display:block;overflow:visible}svg path,svg polyline{vector-effect:non-scaling-stroke}.empty{border:1px dashed var(--vscode-panel-border);border-radius:10px;padding:22px;text-align:center;color:var(--vscode-descriptionForeground)}
 .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--vscode-descriptionForeground);margin-top:12px}.legend span{display:inline-flex;gap:6px;align-items:center}
 .legend b{height:3px;width:17px;display:inline-block;background:var(--series-color)}.note{font-size:12px;color:var(--vscode-descriptionForeground)}.tooltip{position:fixed;pointer-events:none;display:none;max-width:320px;padding:9px 12px;background:var(--vscode-editorHoverWidget-background,var(--vscode-sideBar-background));color:var(--vscode-editorHoverWidget-foreground,var(--vscode-foreground));border:1px solid var(--vscode-editorHoverWidget-border,var(--vscode-panel-border));border-radius:8px;font-size:12px;z-index:4;box-shadow:0 5px 20px #0005;white-space:pre-line}
@@ -109,12 +156,18 @@ ${card('RSS change',number(analysis.rssDeltaMiB,' MiB'),'Host, not per extension
 ${card('Samples',String(analysis.sampleCount),'Measured intervals')}
 ${card('Gaps',String(analysis.gaps),'Not interpolated')}
 </section>
+<h2>Extension highlights <span class="pill">sample-attribution only</span></h2>
+<section class="grid" aria-label="Attributed extension CPU and RAM highlights">
+${cpuCards}${memoryCards}
+</section>
+<p class="note">Known CPU profile coverage: ${board.cards.profileCoverage}% of ${options.cpuProfile?.samples??0} samples, across ${board.cards.profileDurationMs}ms of imported profiling. Unmatched samples stay unknown. No cross-session timeline correlation is assumed.</p>
 <div class="toolbar" role="group" aria-label="Filter extension series">
 <button type="button" data-top="5" aria-pressed="true">Top 5</button>
 <button type="button" data-top="10" aria-pressed="false">Top 10</button>
 <button type="button" data-top="all" aria-pressed="false">All</button>
 <input id="search" type="search" aria-label="Search extensions" placeholder="Find an extension...">
 <button type="button" id="showAll">Show all</button>
+<label class="note"><input type="checkbox" id="onlySuspects"> Only evidence-backed</label>
 </div>
 <div id="chips" class="chips" aria-label="Click to show or hide an extension">${list}</div>
 ${names.length?'':'<p class="note">No extension-level evidence is attached to this session. Use Import CPU Profile to add attributed sampling evidence; Snail never creates fake extension lines.</p>'}
@@ -122,12 +175,16 @@ ${names.length?'':'<p class="note">No extension-level evidence is attached to th
 <div class="graph" id="cpuChart"></div><div class="legend" id="cpuLegend"></div><p class="note" id="cpuNote"></p></section>
 <section class="panel" aria-labelledby="ramTitle"><div class="panelhead"><div><h2 id="ramTitle">Memory · RSS timeline</h2><div class="note">MiB. Extension RAM: N/A unless a separately verified dedicated process can be attributed.</div></div><span class="pill">RAM</span></div>
 <div class="graph" id="ramChart"></div><div class="legend" id="ramLegend"></div><p class="note" id="ramNote"></p></section>
+<section class="panel"><div class="panelhead"><h2>Extension leaderboard · imported profile</h2><label class="note">Sort by <select id="sortBy" aria-label="Sort extension leaderboard"><option value="avg">Average CPU share</option><option value="peak">Peak sample share</option><option value="buckets">High-share buckets</option></select></label></div>
+<div class="scroll"><table><thead><tr><th>Extension</th><th>Avg CPU share</th><th>Peak bin share</th><th>High-share bins</th><th>RAM</th><th>Evidence</th></tr></thead><tbody id="leaderboard">${rows||'<tr><td colspan="6">No attributable extension samples available. Import a profile for evidence-based ranking.</td></tr>'}</tbody></table></div>
+<p class="note">Peak requires ≥3 samples in a profile bin; high-share counts use 20% of sampled stacks. Neither is a measured CPU spike in % of one core. Ranking is only for the imported profile, not the entire Watch session.</p></section>
 <section class="panel"><h2>Extensions installed now</h2><p class="note">Names, icons and activation state reflect the current VS Code window, not which extensions ran during this saved session. No per-extension resource figures are implied.</p><div class="inventory">${inventory||'<p class="note">No local extension metadata available.</p>'}</div></section>
 <section class="panel"><h2>Evidence & limitations</h2><div class="callout">A colorful chart is not a verdict. CPU profile sample-share is an estimate of sampled execution time, not measured CPU percent of one core. No RAM is assigned to individual extensions without a verified source.</div><ul>${notes}</ul></section>
 <div id="tooltip" class="tooltip" role="status" aria-live="polite"></div>
 </main><script nonce="${nonce}">
 const evidence=${data};
 const NS='http://www.w3.org/2000/svg';
+const vscodeApi=acquireVsCodeApi();
 const visible=new Set(evidence.names.map(s=>s.id));
 let top=5,search='';
 const byId=id=>document.getElementById(id);
@@ -175,6 +232,26 @@ function draw(kind){
   }
   const axis=el('text',{x:w/2,y:chartSets.length===2?319:253,fill:'currentColor','fill-opacity':'.65','font-size':11,'text-anchor':'middle'});axis.textContent='Elapsed time · '+(maxTime/1000).toFixed(0)+' seconds';svg.append(axis);
   target.append(svg);
+  const tip=byId('tooltip');
+  svg.addEventListener('pointermove',event=>{
+    const rect=svg.getBoundingClientRect();
+    const relative=(event.clientX-rect.left)/Math.max(rect.width,1);
+    const group=chartSets.length===2 && relative>=0 ? chartSets[
+      (event.clientY-rect.top)/Math.max(rect.height,1)>.45?1:0
+    ]:chartSets[0];
+    const values=group.series.flatMap(s=>s.points.filter(Boolean).map(p=>({s,p})));
+    if(!values.length)return;
+    const groupDuration=Math.max(1,...values.map(x=>x.p.time));
+    const cursorTime=Math.max(0,Math.min(1,relative))*groupDuration;
+    let nearest=values[0];
+    for(const candidate of values)if(Math.abs(candidate.p.time-cursorTime)<Math.abs(nearest.p.time-cursorTime))nearest=candidate;
+    const unit=nearest.s.unit==='cpu-profile-share'?'% of sampled stacks':nearest.s.unit;
+    tip.textContent=nearest.s.name+' · '+nearest.p.value.toFixed(1)+' '+unit+' · at '+(nearest.p.time/1000).toFixed(1)+'s of its recording';
+    tip.style.display='block';
+    tip.style.left=Math.min(event.clientX+14,window.innerWidth-240)+'px';
+    tip.style.top=Math.max(10,event.clientY-48)+'px';
+  });
+  svg.addEventListener('pointerleave',()=>{tip.style.display='none';});
   const legend=byId(kind+'Legend');legend.replaceChildren();
   for(const s of [host,...items]){
     const item=document.createElement('span');
@@ -197,8 +274,28 @@ function redraw(){
 }
 document.querySelectorAll('.chip').forEach(button=>button.addEventListener('click',()=>{const id=button.dataset.id;if(visible.has(id))visible.delete(id);else visible.add(id);redraw();}));
 document.querySelectorAll('[data-top]').forEach(button=>button.addEventListener('click',()=>{top=button.dataset.top;redraw();}));
+byId('sortBy').addEventListener('change',()=>{
+  const type=byId('sortBy').value;
+  const key=type==='peak'?'peak':type==='buckets'?'buckets':'avg';
+  const body=byId('leaderboard');
+  const rows=[...body.querySelectorAll('tr[data-id]')].sort((a,b)=>Number(b.dataset[key])-Number(a.dataset[key]));
+  body.replaceChildren(...rows);
+});
+document.querySelectorAll('[data-investigate]').forEach(button=>button.addEventListener('click',()=>{
+  const id=button.dataset.investigate;
+  if(typeof id==='string'&&evidence.ranking.some(x=>x.id===id)){
+    vscodeApi.postMessage({type:'investigate',extensionId:id});
+  }
+}));
 byId('search').addEventListener('input',event=>{search=event.target.value.trim().toLowerCase();redraw();});
-byId('showAll').addEventListener('click',()=>{visible.clear();for(const s of evidence.names)visible.add(s.id);search='';byId('search').value='';redraw();});
+byId('onlySuspects').addEventListener('change',event=>{
+  for(const s of evidence.names){
+    if(event.target.checked&&!evidence.ranking.some(x=>x.id===s.id&&x.confidence==='estimated'))visible.delete(s.id);
+    else if(!event.target.checked)visible.add(s.id);
+  }
+  redraw();
+});
+byId('showAll').addEventListener('click',()=>{byId('onlySuspects').checked=false;visible.clear();for(const s of evidence.names)visible.add(s.id);search='';byId('search').value='';redraw();});
 redraw();
 </script></body></html>`;
 }

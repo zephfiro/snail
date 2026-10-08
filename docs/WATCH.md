@@ -35,6 +35,19 @@ A separate `MemoryAttribution` contract accepts memory only when an adapter has 
 
 Profiles do **not** contain extension-specific RSS/heap ownership. Consequently the RAM chart will continue to show host RSS and mark extension RAM **unavailable** until a genuinely attributable source can be implemented.
 
+## Villains Explorer: highlights, sorting, and investigation
+
+When a compatible CPU profile has been manually imported, the Explorer shows **Highest avg CPU sample-share**, **Highest profile bucket share**, **Most high-share profile buckets** and a cautious **Investigate first** suggestion. Cards show extension icons/names from the **current** installation, with deterministic colors; the current inventory is not evidence of historical activity.
+
+- Average sample-share = extension-attributed V8 stack samples ÷ **all** profile samples (unknowns stay in denominator).
+- Peak bucket-share = maximum sample-share from buckets containing **at least 3 samples**. A one-sample bucket cannot win as an exceptional spike.
+- "High-share buckets" counts 500ms profile-relative buckets with at least 20% of samples. This does **not** equal seconds of sustained host CPU activity.
+- A ranking requires ≥20 profile samples and ≥50% recognized-stack coverage; weaker profiles are marked **Insufficient evidence**, not a winner.
+- Profile-based results are estimates of *relative sampled execution*, not per-extension core utilization. They cannot be synchronized retrospectively to the Watch session.
+- RAM winner/growth cards remain **N/A** until there is a verified dedicated-process source; shared RSS is not divided.
+
+Click **Investigate** to open a manual, reversible extension investigation flow. No extensions are disabled automatically. Controls include Top 5/10/All, search, clickable legend and a sortable evidence table. Tooltips display only observed values in their own time window.
+
 ## Lifetime and limits
 
 - **OFF by default**, even after reload. VS Code may activate Snail on startup to display the OFF indicator, but this does not activate polling.

@@ -5,6 +5,8 @@ import { createNodeProcessSampleSource } from '../measurements/process';
 import { WatchMonitor } from './monitor';
 import { LocalWatchStorage } from './storage';
 import { renderVillainsExplorer } from './explorer';
+import { planForSuspect } from '../doctor/investigation';
+import { renderInvestigation } from '../doctor/investigation-view';
 import { currentExtensionMetadata } from './metadata';
 import { importCpuProfile, profileSeries, MAX_PROFILE_BYTES } from './profile';
 import type { WatchSession } from './types';
@@ -70,9 +72,23 @@ export function registerWatchCommands(context:vscode.ExtensionContext):void {
     const knownExtensions=await currentExtensionMetadata();
     if(!panel.visible)return;
     const profile=session.cpuProfiles?.at(-1);
+    panel.webview.onDidReceiveMessage(message=>{
+      if(!message || message.type!=='investigate' || typeof message.extensionId!=='string')return;
+      if(!profile?.extensions.some(ext=>ext.id===message.extensionId))return;
+      const plan=planForSuspect({
+        id:message.extensionId,
+        title:'Extension '+message.extensionId,
+        category:'extension',
+        hypothesis:'A manually imported CPU profile contains execution samples associated with this extension. This does not establish that it caused the Watch session slowness.',
+        nextStep:'Use Extension Bisect and repeat comparable operations to investigate.'
+      });
+      const detail=vscode.window.createWebviewPanel('snailExtensionInvestigation',
+        'Snail · Extension Investigation',vscode.ViewColumn.Beside,{enableScripts:false});
+      detail.webview.html=renderInvestigation(plan);
+    },undefined,context.subscriptions);
     panel.webview.html=renderVillainsExplorer(session,{
       nonce,cspSource:panel.webview.cspSource,knownExtensions,
-      cpuSeries:profile?profileSeries(profile):[]
+      cpuProfile:profile,cpuSeries:profile?profileSeries(profile):[]
     });
   }
   async function chooseSession(title:string):Promise<WatchSession|undefined> {
