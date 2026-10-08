@@ -37,7 +37,7 @@ test('reports extension inventory without attributing individual CPU or RAM', as
   assert.equal(report.environment.remote, false);
   assert.ok(report.findings.some(item => item.id === 'extension-inventory' && item.confidence === 'informational'));
   assert.ok(report.process && report.process.scope.includes('NOT individual'));
-  assert.ok(report.warnings.some(warning => warning.includes('No local workspace')));
+  assert.ok(report.warnings.some(warning => warning.includes('No file-backed workspace')));
 });
 
 test('one collection failure preserves the remaining diagnostics', async t => {
