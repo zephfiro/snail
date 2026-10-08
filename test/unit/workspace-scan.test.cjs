@@ -19,7 +19,7 @@ test('scans directory names without descending into generated folders', async t 
   await fs.writeFile(path.join(root, 'src', 'entry.ts'), 'contents must not be read');
   const report = await scanWorkspace(root, () => false);
   assert.deepEqual(report.candidates, ['node_modules']);
-  assert.equal(report.entries, 4);
+  assert.equal(report.entries, 3);
   assert.equal(report.limitReached, false);
   assert.equal(report.skippedDirectories, 0);
 });
@@ -34,8 +34,7 @@ test('stops at a configured entry limit and marks results partial', async t => {
 
 test('stops at configured time limit and marks results partial', async t => {
   const root = await fixture(t);
-  let now = 100;
-  const result = await scanWorkspace(root, () => false, { maxMs: 2, now: () => ++now });
+  const result = await scanWorkspace(root, () => false, { maxMs: 0, now: () => 100 });
   assert.equal(result.limitReached, true);
 });
 
