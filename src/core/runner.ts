@@ -42,7 +42,7 @@ async function runBounded(
   };
 
   const work = Promise.resolve().then(() => module.collect(scopedContext))
-    .then<CollectorOutcome>(
+    .then<CollectorOutcome, CollectorOutcome>(
       value => ({ kind: 'complete', value }),
       error => ({ kind: 'error', error })
     );
