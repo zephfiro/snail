@@ -59,7 +59,18 @@ const module = defineDiagnostic(collector, analyzer);
 - `Finding.sources` links conclusions to the collector(s) that produced their evidence.
 - `createReport` assembles a backwards-compatible summary and the collected statuses.
 - `CollectionUnavailable` is reserved for known, static unsupported-environment messages.
-- The current runner uses *cooperative cancellation*, not hard termination of blocked operations. Per-collector timeout enforcement is tracked in #4.
+- Every collector has a wall-clock response deadline; timeout and cancellation suppress late results. Pending native filesystem operations are **cooperatively** interrupted after their in-flight await resolves, not forcibly killed.
+
+## Bounded diagnostics and workspaces (#4)
+
+- `DiagnosticRunner` enforces per-collector response deadlines. The command defaults to budgets of **extensions 1000ms, process 1200ms, workspace 2500ms, settings 1000ms**. New collectors use a conservative 3000ms fallback until configured. The typed `CollectorRecord.status` distinguishes `collected`, `unavailable`, `failed`, `timed_out`, and `skipped`.
+- The runner uses a cancellation-event race when the VS Code token provides `onCancellationRequested`, so an unresponsive collector does not block the command. It also passes a derived `isCancellationRequested` signal to the collector; on timeout, that signal becomes true so ongoing cooperative work winds down. Late results cannot enter the evidence snapshot and arbitrary errors never appear in user-facing warnings.
+- **Important limit:** a pending native filesystem operation cannot be forcibly terminated. A timeout bounds how long the command waits, not how long a single already-issued OS operation continues. Async directory enumeration avoids the blocking overhead of reading an entire enormous folder into an array.
+- `scanWorkspace` streams entries through `fs.opendir` and an async iterator. It does not follow symlinks or read file contents. It uses entry, depth, time, and event-loop-yield budgets (yield every 128 entries); its injectable `openDirectory` and monotonic clock support deterministic tests.
+- Metadata: `entries`, `scannedDirectories`, `skippedDirectories`, `skippedSymlinks`, `depthLimitedDirectories`, `limitReached`, `limitReasons`, and fixed-name directory candidates. No scanned path is stored in the report.
+- The workspace collector traverses each accessible file-backed root in order with **shared** entry/time budgets. Virtual URI roots are skipped with a warning; a completely virtual/no-workspace environment is `unavailable`. For Remote SSH/WSL/containers, whether file-backed roots are readable depends on where the extension host executes.
+- Incomplete scans, inaccessible roots, depth caps and timeouts must not be interpreted as a clean health result. The report marks an unsuccessful/timed-out workspace collection as incomplete.
+- Total command time remains influenced by independent collector budgets and synchronous rendering. This version does not establish a strict whole-command SLA; overhead measurement is tracked in #13.
 
 ## Extension inventory (#11)
 
