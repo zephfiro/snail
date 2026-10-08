@@ -81,6 +81,8 @@ export function createShareableReport(report: Report) {
         status: suspect.status === 'suspected' ? 'suspected' : 'insufficient_evidence',
         note: 'This is a hypothesis, not a confirmed component-level root cause.'
       })),
+    durationMs: safeNumber(report.durationMs ?? 0),
+    budgetExceeded: Boolean(report.budgetExceeded),
     warnings: [] as string[],
     collectors: report.collectors.filter(item => collectors.has(item.id)).map(item => ({
       id: item.id,
