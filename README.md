@@ -29,7 +29,7 @@ The existing smoke tests check packaging and manifest invariants; unit tests exe
 ## What v0.1.0 diagnoses
 
 - Local-only extension inventory: ID, display name, version (when available), built-in/third-party status, activation and UI/Workspace kind. This is **not** an individual CPU/RAM report.
-- Short, aggregated CPU and RSS snapshot of the current Extension Host process.
+- On-demand, 500 ms aggregate CPU (% of a single core, potentially >100%) and RSS (MB/MiB approximation) of the Node Extension Host running Snail. The Webview displays scope and duration, or `N/A` when unavailable. These are **not** per-extension values or proof of sustained high load.
 - Bounded workspace directory inspection (names and directory types only; no file contents).
 - Possible file-watching and search-exclusion opportunities, with hypotheses labeled as such.
 - Failures and collection limits, so an incomplete scan is not mistaken for a complete one.
