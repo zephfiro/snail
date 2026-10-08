@@ -73,7 +73,7 @@ export function renderVillainsExplorer(session:WatchSession,options:ExplorerOpti
   // Data from the extension process is treated as untrusted before interpolation.
   const data=toJSON({
     host:{cpu:hostPoints(session,'cpuPercentOneCore'),ram:hostPoints(session,'rssMiB')},
-    cpu:cpu.map(s=>({...s,icon:undefined,points:s.points.slice(0,2000)})),
+    cpu:cpu.map(s=>({...s,name:metadata.get(s.id.toLowerCase())?.name??s.name,icon:undefined,points:s.points.slice(0,2000)})),
     ram:ram.map(s=>({...s,icon:undefined,points:s.points.slice(0,2000)})),
     names,
     intervalMs:session.intervalMs,
@@ -184,6 +184,7 @@ ${names.length?'':'<p class="note">No extension-level evidence is attached to th
 </main><script nonce="${nonce}">
 const evidence=${data};
 const NS='http://www.w3.org/2000/svg';
+const vscodeApi=acquireVsCodeApi();
 const visible=new Set(evidence.names.map(s=>s.id));
 let top=5,search='';
 const byId=id=>document.getElementById(id);
@@ -245,7 +246,7 @@ function draw(kind){
     let nearest=values[0];
     for(const candidate of values)if(Math.abs(candidate.p.time-cursorTime)<Math.abs(nearest.p.time-cursorTime))nearest=candidate;
     const unit=nearest.s.unit==='cpu-profile-share'?'% of sampled stacks':nearest.s.unit;
-    tip.textContent=nearest.s.name+' · '+nearest.p.value.toFixed(1)+' '+unit+'\nAt '+(nearest.p.time/1000).toFixed(1)+'s in its own recording window';
+    tip.textContent=nearest.s.name+' · '+nearest.p.value.toFixed(1)+' '+unit+' · at '+(nearest.p.time/1000).toFixed(1)+'s of its recording';
     tip.style.display='block';
     tip.style.left=Math.min(event.clientX+14,window.innerWidth-240)+'px';
     tip.style.top=Math.max(10,event.clientY-48)+'px';
@@ -283,7 +284,7 @@ byId('sortBy').addEventListener('change',()=>{
 document.querySelectorAll('[data-investigate]').forEach(button=>button.addEventListener('click',()=>{
   const id=button.dataset.investigate;
   if(typeof id==='string'&&evidence.ranking.some(x=>x.id===id)){
-    const vscode=acquireVsCodeApi();vscode.postMessage({type:'investigate',extensionId:id});
+    vscodeApi.postMessage({type:'investigate',extensionId:id});
   }
 }));
 byId('search').addEventListener('input',event=>{search=event.target.value.trim().toLowerCase();redraw();});
