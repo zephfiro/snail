@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import * as os from 'node:os';
+import { randomBytes } from 'node:crypto';
 import { createNodeProcessSampleSource } from '../measurements/process';
 import { WatchMonitor } from './monitor';
 import { LocalWatchStorage } from './storage';
-import { renderWatchAnalysis } from './view';
+import { renderVillainsExplorer } from './explorer';
 import type { WatchSession } from './types';
 import { MAX_WATCH_DURATION_MS, WATCH_INTERVAL_MS } from './types';
 
@@ -61,9 +62,12 @@ export function registerWatchCommands(context:vscode.ExtensionContext):void {
   function openAnalysis(session:WatchSession):void {
     const panel=vscode.window.createWebviewPanel(
       'snailWatchSession','Snail Watch · Session Analysis',vscode.ViewColumn.Active,
-      {enableScripts:false}
+      {enableScripts:true,localResourceRoots:[]}
     );
-    panel.webview.html=renderWatchAnalysis(session);
+    const nonce=randomBytes(16).toString('base64');
+    panel.webview.html=renderVillainsExplorer(session,{
+      nonce,cspSource:panel.webview.cspSource
+    });
   }
   async function chooseSession(title:string):Promise<WatchSession|undefined> {
     const sessions=await store.list();
