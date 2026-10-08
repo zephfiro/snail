@@ -32,6 +32,10 @@ export function createVSCodeServices(): DiagnosticServices {
     },
     watcherExclude: () =>
       vscode.workspace.getConfiguration('files').get<Record<string, boolean>>('watcherExclude') ?? {},
+    searchExclude: () =>
+      vscode.workspace.getConfiguration('search').get<Record<string, boolean>>('exclude') ?? {},
+    tsServerLogLevel: () =>
+      vscode.workspace.getConfiguration('typescript').get('tsserver.log'),
     sampleProcess: cancelled => sampleCurrentProcess(cancelled, createNodeProcessSampleSource()),
     scanWorkspace
   };
