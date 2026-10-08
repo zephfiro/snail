@@ -34,10 +34,11 @@ export function collectExtensionInventory(raw: readonly ExtensionSource[]): {
     }
     seen.add(key);
     const isBuiltin = source.isBuiltin === true || (source.isBuiltin !== false && key.startsWith('vscode.'));
+    const version = optionalText(source.version, 80);
     entries.push({
       id,
       displayName: optionalText(source.displayName, 160) ?? id,
-      ...(optionalText(source.version, 80) ? { version: optionalText(source.version, 80) } : {}),
+      ...(version ? { version } : {}),
       isActive: source.isActive === true,
       isBuiltin,
       extensionKind: source.extensionKind === 1 ? 'ui' : source.extensionKind === 2 ? 'workspace' : 'unknown'
