@@ -9,6 +9,7 @@ const findingsCatalog = {
   'extension-host-cpu': 'Aggregate Extension Host CPU observation',
   'extension-inventory': 'Extension inventory summary',
   'workspace-generated-dirs': 'Generated-directory exclusion review',
+  'workspace-search-exclude': 'Generated-directory search exclusion review',
   'tsserver-verbose-logging': 'TypeScript server logging configuration'
 } as const;
 const suspectCatalog = {
