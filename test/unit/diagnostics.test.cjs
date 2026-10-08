@@ -49,7 +49,10 @@ test('one collection failure preserves the remaining diagnostics', async t => {
   try {
     const report = await diagnose({ isCancellationRequested: false });
     assert.ok(report.findings.some(item => item.id === 'extension-inventory'));
-    assert.ok(report.warnings.some(item => item.includes('Workspace scan unavailable')));
+    assert.ok(report.warnings.some(item => item.includes('Collector settings failed')));
+    assert.ok(report.collectors.some(item => item.id === 'workspace' && item.status === 'collected'));
+    assert.ok(report.collectors.some(item => item.id === 'settings' && item.status === 'failed'));
+    assert.equal(report.findings.some(item => item.id === 'workspace-generated-dirs'), false);
     assert.equal(report.summary.installedExtensions, 2);
   } finally {
     fakeVscode.workspace.workspaceFolders = undefined;
