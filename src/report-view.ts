@@ -73,6 +73,7 @@ export function renderReport(report: Report): string {
   <div class="tile"><b>${process ? process.cpuPercentOneCore + '%' : 'N/A'}</b>Host process CPU (one core)</div>
   <div class="tile"><b>${process ? process.rssMb + ' MB' : 'N/A'}</b>Host process RSS</div></div>
   <p class="muted">CPU: ${process ? escapeHtml(String(process.cpuPercentOneCore)) + '% of one full CPU core over ' + escapeHtml(String(process.samplingMs)) + 'ms' : 'sample unavailable'}. Values above 100% are possible. RSS is a point-in-time process memory snapshot. ${process ? escapeHtml(process.scope) : 'No process metrics were collected.'}</p>
+  ${summary.limitReached ? '<p class="muted">Workspace scan incomplete: findings may be missing.</p>' : ''}
   <h2>Findings</h2>${report.findings.map(renderFinding).join('')}
   ${renderInventory(report)}
   <h2>Collection limitations</h2><p>The VS Code API cannot directly report individual extensions' CPU or memory.

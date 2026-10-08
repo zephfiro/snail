@@ -1,4 +1,4 @@
-export { DiagnosticRunner } from './runner';
+export { DiagnosticRunner, DEFAULT_COLLECTOR_TIMEOUT_MS } from './runner';
 export { defineDiagnostic, CollectionUnavailable } from './contracts';
 export { createDefaultModules } from './default-modules';
 export { createReport } from './report';

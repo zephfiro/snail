@@ -30,12 +30,20 @@ The existing smoke tests check packaging and manifest invariants; unit tests exe
 
 - Local-only extension inventory: ID, display name, version (when available), built-in/third-party status, activation and UI/Workspace kind. This is **not** an individual CPU/RAM report.
 - On-demand, 500 ms aggregate CPU (% of a single core, potentially >100%) and RSS (MB/MiB approximation) of the Node Extension Host running Snail. The Webview displays scope and duration, or `N/A` when unavailable. These are **not** per-extension values or proof of sustained high load.
-- Bounded workspace directory inspection (names and directory types only; no file contents).
+- Asynchronous streaming directory inspection (names/types only), with shared limits across multi-root workspaces: 2,500 entries, depth 5, and 2 seconds by default. Unreadable folders, symbolic links, and depth truncation are recorded without exposing paths.
 - Possible file-watching and search-exclusion opportunities, with hypotheses labeled as such.
 - Failures and collection limits, so an incomplete scan is not mistaken for a complete one.
 - Exportable JSON report through **Snail: Export Last Report**. Extension IDs, names and versions appear only inside the local Webview and are omitted from the export by default. Other privacy safeguards are tracked in #5.
 
 The inventory is a point-in-time snapshot: changes made by installing, uninstalling or enabling extensions appear in the next diagnosis. The `extensionKind` is the logical UI/Workspace kind exposed by VS Code, **not** a definitive physical extension host location. `isActive` indicates activation, not performance or CPU usage.
+
+## Cancellation and resource budgets
+
+When you cancel the VS Code progress notification, the runner stops scheduling collectors and returns an explicitly partial report. Each collector also has a hard **response deadline** (extensions: 1s; process: 1.2s; workspace: 2.5s; settings: 1s). A timed-out collector's late results are ignored, and other collectors continue.
+
+Workspace enumeration uses `fs.opendir` to stream entries without loading huge directory arrays; scans are cooperatively stopped between asynchronous operations. Pending OS filesystem operations **cannot be forcibly terminated**, so the hard deadline bounds the command's wait, while a late operation may finish before it observes cancellation. This is not a claim of real-time interruption or zero background I/O.
+
+Virtual workspace roots are skipped; remote `file:` roots are scanned only if accessible from the Extension Host running Snail. Partial scans are shown as incomplete, not as evidence that no problem exists.
 
 ## Architecture
 
