@@ -69,8 +69,10 @@ export function registerWatchCommands(context:vscode.ExtensionContext):void {
       {enableScripts:true,localResourceRoots:[]}
     );
     const nonce=randomBytes(16).toString('base64');
+    let disposed=false;
+    panel.onDidDispose(()=>{disposed=true;});
     const knownExtensions=await currentExtensionMetadata();
-    if(!panel.visible)return;
+    if(disposed)return;
     const profile=session.cpuProfiles?.at(-1);
     panel.webview.onDidReceiveMessage(message=>{
       if(!message || message.type!=='investigate' || typeof message.extensionId!=='string')return;

@@ -22,6 +22,8 @@ Your CPU/RSS history is saved **locally by session**, even when Watch is OFF. Ru
 
 See [Snail Watch documentation](docs/WATCH.md) for data scope, persistence, retention, safety limits and commands.
 
+**New: [Villains Explorer](docs/EXPLORER.md)** — two interactive CPU/RAM charts, extension icons, high-impact cards, sample-share ranking, search/filter and investigative actions. Use **Snail: Import CPU Profile for Watch Session** for attributed CPU evidence. RAM by extension remains **N/A** without independently verified isolation; the Watch never invents per-extension resource figures.
+
 ## Quick start
 
 Requires Node.js 22+, npm and VS Code 1.94+.

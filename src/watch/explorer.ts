@@ -124,7 +124,7 @@ export function renderVillainsExplorer(session:WatchSession,options:ExplorerOpti
   const nonce=safe(options.nonce);
   const csp=options.cspSource?'; img-src '+safe(options.cspSource)+' data:':'';
   const list=names.map(s=>'<button type="button" class="chip" data-id="'+safe(s.id)+'" aria-pressed="true">'+
-    '<span class="dot" style="--series-color:'+s.color+'"></span>'+safeIcon(s.icon)+safe(s.name)+'</button>').join('');
+    '<span class="dot" data-color="'+s.color+'"></span>'+safeIcon(s.icon)+safe(s.name)+'</button>').join('');
   const card=(label:string,val:string,hint:string)=>'<article class="metric"><div class="label">'+safe(label)+'</div><strong>'+
     safe(val)+'</strong><small>'+safe(hint)+'</small></article>';
   const state=session.state==='recording'?'Recording / potentially interrupted':session.state;
@@ -186,6 +186,8 @@ const evidence=${data};
 const NS='http://www.w3.org/2000/svg';
 const vscodeApi=acquireVsCodeApi();
 const visible=new Set(evidence.names.map(s=>s.id));
+document.querySelectorAll('.dot[data-color]').forEach(dot=>
+  dot.style.setProperty('--series-color',dot.dataset.color));
 let top=5,search='';
 const byId=id=>document.getElementById(id);
 const el=(name,attrs={})=>{const node=document.createElementNS(NS,name);for(const [k,v] of Object.entries(attrs))node.setAttribute(k,String(v));return node;};
@@ -205,13 +207,16 @@ function draw(kind){
     : [{label:kind==='cpu'?'% of one core':'MiB',series:[host,...items],height:225,top:12}];
   const svg=el('svg',{viewBox:'0 0 920 '+(chartSets.length===2?'328':'258'),role:'img','aria-label':kind.toUpperCase()+' session timeline with '+items.length+' attributed extension series'});
   const all=[...host.points.filter(Boolean),...items.flatMap(s=>s.points)];
-  const maxTime=Math.max(1,...all.map(p=>p.time));
+  const maxTime=all.reduce((largest,p)=>Math.max(largest,p.time),1);
+  const timeWindows=[];
   for(const grp of chartSets){
     const chartTop=grp.top,chartBottom=grp.top+grp.height-26;
     const seriesValues=grp.series.flatMap(s=>s.points.filter(Boolean).map(p=>p.value));
     const min=Math.min(0,...seriesValues),max=Math.max(1,...seriesValues),range=max-min;
     // Profile-relative buckets and Watch session wall time have separate origins.
-    const groupTime=Math.max(1,...grp.series.flatMap(s=>s.points.filter(Boolean).map(p=>p.time)));
+    const groupTime=grp.series.reduce((max,s)=>s.points.reduce(
+      (m,p)=>p?Math.max(m,p.time):m,max),1);
+    timeWindows.push(groupTime);
     const x=t=>margin.l+t/groupTime*(w-margin.l-margin.r);
     const y=v=>chartBottom-(v-min)/range*(chartBottom-chartTop-15);
     for(let i=0;i<=3;i++){
@@ -230,7 +235,9 @@ function draw(kind){
       for(const p of s.points){if(!p){flush();continue;}chunk.push(x(p.time).toFixed(1)+','+y(p.value).toFixed(1));}flush();
     }
   }
-  const axis=el('text',{x:w/2,y:chartSets.length===2?319:253,fill:'currentColor','fill-opacity':'.65','font-size':11,'text-anchor':'middle'});axis.textContent='Elapsed time · '+(maxTime/1000).toFixed(0)+' seconds';svg.append(axis);
+  const axis=el('text',{x:w/2,y:chartSets.length===2?319:253,fill:'currentColor','fill-opacity':'.65','font-size':11,'text-anchor':'middle'});axis.textContent=chartSets.length===2
+    ? 'Separate clocks: Watch '+(timeWindows[0]/1000).toFixed(1)+'s · imported profile '+(timeWindows[1]/1000).toFixed(1)+'s'
+    : 'Elapsed time · '+(maxTime/1000).toFixed(0)+' seconds';svg.append(axis);
   target.append(svg);
   const tip=byId('tooltip');
   svg.addEventListener('pointermove',event=>{
