@@ -105,6 +105,18 @@ The `process` collector delegates to `sampleCurrentProcess(cancelled, source, sa
 
 In local desktop extension hosts and remote Node hosts, Node process readings are usually available but describe **the host where Snail is executing**, which may not be the UI host. Web extension hosts cannot assume Node process APIs and may require a different adapter. In the Extension Development Host, results represent a **development/test process**, not the user's normal workload. No background sampling or remote data transmission is introduced.
 
+## Settings rules and limitations (#6)
+
+The Settings collector reads only the effective `files.watcherExclude`, `search.exclude`, and `typescript.tsserver.log` values through public VS Code configuration APIs. It does not read arbitrary user settings or TS Server logs; settings keys and globs are used **locally**, with up to 200 enabled exclusion patterns retained for analysis but never exported.
+
+The workspace analyzer treats known directory names (`node_modules`, `dist`, etc.) and missing matching exclusion patterns as **hypotheses only**, not measured watcher or search workload. The matching is intentionally conservative; a nontrivial glob may not be recognized, so rules can have false positives. The new TypeScript logging rule reports verbose logging as an **inferred configuration observation**, not a measured slowdown.
+
+**Process attribution gap:** public VS Code Extension APIs do not reveal CPU/RAM per TS Server or extension. The TypeScript investigation flow guides the user through native Process Explorer/TS Server Log tools and safe manual comparisons; missing measurements are not filled in or guessed.
+
+## Safe export and UX (#5/#7)
+
+`src/report-export.ts` uses an explicit catalog of static IDs/titles and numeric aggregates. It excludes all user/extension-supplied descriptive strings: extension identifiers/versions, arbitrary evidence messages, exceptions, warnings, full workspace paths and raw investigation logs. Only safe known finding/suspect codes and the summary survive a manual JSON export. The local Webview uses escaped HTML, groups findings by measured/inferred/informational status, and exposes collector results via semantic details/summary elements without JavaScript. The extension does not send analytics or network requests.
+
 ## Measurement boundaries
 
 - `process.cpuUsage()` and `process.memoryUsage()` measure the **current Node process**, not individual extensions.
