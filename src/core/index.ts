@@ -13,3 +13,5 @@ export type {
   DiagnosticServices, Finding, Report, EvidenceSnapshot, Collected,
   ExtensionSource, ExtensionInventoryEntry, ExtensionsEvidence
 } from './contracts';
+
+export { settingsAnalyzer } from '../analyzers/settings';
