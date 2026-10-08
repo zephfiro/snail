@@ -7,7 +7,8 @@
 - [x] Conservative experimental verdicts with privacy-first local storage.
 - [x] Script-free findings panel and allowlisted export.
 - [x] Cooperative cancellation, per-collector deadlines and multi-root scanning.
-- [ ] Resource budget/overhead benchmarking, VSIX verification and manual acceptance of the release candidate (#13/#14).
+- [x] Resource budget instrumentation, synthetic benchmarking and VSIX packaging/installation CI (#13/#14).
+- [ ] Manual real-workspace release acceptance before publishing to Marketplace.
 
 ## v0.2 — Advanced investigation (#8)
 - [ ] Independent process profiling and time-series analysis through supported instrumentation where possible.
