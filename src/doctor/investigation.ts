@@ -30,7 +30,11 @@ const genericSteps: Record<SuspectCategory, InvestigationStep[]> = {
     {title:'Inspect settings',instructions:'Review relevant workspace/user settings with attention to scope and inherited defaults.',observation:'Exact effective setting and expected behavior.'},
     {title:'Compare carefully',instructions:'Change only one reversible setting, with consent, and repeat the same operation.',observation:'Comparable before/after observations.',reversal:'Restore the original value.'}
   ],
-  'language-server': [],
+  'language-server': [
+    {title:'Identify the server',instructions:'Use a supported process viewer or the language extension documentation to identify the actual server, if available.',observation:'Observed process/server identity, not Extension Host CPU.'},
+    {title:'Inspect project scope',instructions:'Review language server logs and relevant configuration locally; do not export raw logs automatically.',observation:'Concrete reproducible operations or indexing events.'},
+    {title:'Single-variable test',instructions:'With consent, change one reversible configuration and repeat the same operation.',observation:'Comparable latencies before and after.',reversal:'Restore the prior configuration.'}
+  ],
   extension: [
     {title:'Form a specific hypothesis',instructions:'Identify independent evidence for an extension. Active status alone is not evidence of high CPU.',observation:'Reproducible workload or supported profile.'},
     {title:'Manual A/B test',instructions:'Use VS Code Extension Bisect or disable the suspected extension manually, then reload.',observation:'Repeat the same operation with consistent conditions.',reversal:'Re-enable extensions after testing.'}
@@ -62,7 +66,7 @@ export const TYPESCRIPT_INVESTIGATION: InvestigationPlan = {
 };
 
 export function planForSuspect(suspect: Pick<Suspect, 'id'|'title'|'hypothesis'|'category'|'nextStep'>): InvestigationPlan {
-  if (suspect.category === 'language-server' || suspect.id === TYPESCRIPT_INVESTIGATION.id) return TYPESCRIPT_INVESTIGATION;
+  if (suspect.id === TYPESCRIPT_INVESTIGATION.id) return TYPESCRIPT_INVESTIGATION;
   return {
     id: suspect.id, title: 'Investigate: ' + suspect.title,
     subject: suspect.category, hypothesis: suspect.hypothesis,
