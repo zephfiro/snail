@@ -1,6 +1,6 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {planForSuspect,TYPESCRIPT_INVESTIGATION,renderInvestigation}=require('../../dist/doctor/investigation.js');
+const {planForSuspect,TYPESCRIPT_INVESTIGATION,renderInvestigation}=require('../../dist/doctor/index.js');
 const categories=['extension-host','watcher','configuration','language-server','extension','workspace'];
 test('typescript plan requires direct evidence, baseline, reversible intervention and comparison',()=>{
   const p=TYPESCRIPT_INVESTIGATION;
