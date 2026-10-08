@@ -55,7 +55,7 @@ export interface SettingsEvidence {
 }
 export interface CollectorRecord {
   id: string;
-  status: 'collected' | 'unavailable' | 'failed' | 'skipped';
+  status: 'collected' | 'unavailable' | 'failed' | 'skipped' | 'timed_out';
   durationMs: number;
 }
 export interface Report {
@@ -73,10 +73,13 @@ export interface Report {
 
 export interface CancellationSignal {
   readonly isCancellationRequested: boolean;
+  onCancellationRequested?: (listener: () => void) => { dispose(): void };
 }
 export interface DiagnosticServices {
   listExtensions(): readonly ExtensionSource[];
   workspaceRoot(): { scheme: string; fsPath: string } | undefined;
+  /** All workspace roots; optional to keep existing injected service fixtures compatible. */
+  workspaceRoots?(): readonly { scheme: string; fsPath: string }[];
   watcherExclude(): Readonly<Record<string, boolean>>;
   sampleProcess(cancelled: () => boolean): Promise<ProcessEvidence>;
   scanWorkspace(folder: string, cancelled: () => boolean, options: ScanOptions): Promise<ScanResult>;
@@ -85,7 +88,12 @@ export interface DiagnosticContext {
   readonly cancellation: CancellationSignal;
   /** Injectable monotonic clock (milliseconds). */
   readonly now: () => number;
-  readonly limits: { readonly workspace: ScanOptions };
+  readonly limits: {
+    readonly workspace: ScanOptions;
+    readonly collectors?: Readonly<Record<string, number>>;
+  };
+  /** Test seam: schedule a deadline and return a cleanup function. */
+  readonly scheduleTimeout?: (ms: number, trigger: () => void) => () => void;
   readonly services: DiagnosticServices;
 }
 export interface Collected<T> {
