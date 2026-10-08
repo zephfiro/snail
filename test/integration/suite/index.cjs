@@ -15,6 +15,12 @@ async function run() {
   assert.ok(commands.includes('snail.recordBaseline'));
   assert.ok(commands.includes('snail.recordComparison'));
   assert.ok(commands.includes('snail.clearExperimentData'));
+  assert.ok(commands.includes('snail.startWatch'));
+  assert.ok(commands.includes('snail.stopWatch'));
+  assert.ok(commands.includes('snail.toggleWatch'));
+  assert.ok(commands.includes('snail.openWatchSessions'));
+  assert.ok(commands.includes('snail.exportWatchSession'));
+  assert.ok(commands.includes('snail.clearWatchHistory'));
   await vscode.commands.executeCommand('snail.investigateTypeScript');
   await vscode.commands.executeCommand('snail.diagnose');
   // The result is a Webview panel. The public API cannot enumerate all Webviews,
