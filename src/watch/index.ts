@@ -13,3 +13,6 @@ export type { ExplorerSeries, ExplorerOptions } from './explorer';
 
 export { importCpuProfile, profileSeries, extensionIdForUrl, MAX_PROFILE_BYTES } from './profile';
 export type { ImportedCpuProfile, ExtensionRoot, CpuProfileBucket } from './profile';
+
+export { verifiedMemorySeries } from './memory';
+export type { MemoryAttribution } from './memory';
