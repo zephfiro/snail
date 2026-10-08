@@ -23,6 +23,9 @@ export function createVSCodeServices(): DiagnosticServices {
         isBuiltin: manifest.isBuiltin
       };
     }),
+    workspaceRoots: () => (vscode.workspace.workspaceFolders ?? []).map(root => ({
+      scheme: root.uri.scheme, fsPath: root.uri.fsPath
+    })),
     workspaceRoot: () => {
       const root = vscode.workspace.workspaceFolders?.[0];
       return root ? { scheme: root.uri.scheme, fsPath: root.uri.fsPath } : undefined;
