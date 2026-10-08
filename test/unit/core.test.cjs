@@ -155,3 +155,27 @@ test('report preserves partial successes when a collector is unavailable', async
   assert.equal(report.process, undefined);
   assert.equal(report.collectors.find(c => c.id === 'process').status, 'failed');
 });
+
+test('cancelled sampling is skipped, not misclassified as a collector error', async () => {
+  const signal = { isCancellationRequested: false };
+  const runner = new DiagnosticRunner([
+    item('process', async () => {
+      signal.isCancellationRequested = true;
+      throw new Error('Process sampling cancelled');
+    }),
+    item('workspace', async () => ({ data: { scan: { entries: 0, candidates: [], limitReached: false, skippedDirectories: 0 } } }))
+  ]);
+  const run = await runner.run(context({ cancellation: signal }));
+  assert.deepEqual(run.collectors.map(c => c.status), ['skipped', 'skipped']);
+  assert.ok(run.warnings.some(w => w.includes('cancelled')));
+  assert.ok(!run.warnings.some(w => w.includes('Collector process failed')));
+});
+test('measured CPU spike is not described as sustained load or per-extension activity', () => {
+  const sample = { cpuPercentOneCore: 190, rssMb: 150, samplingMs: 503, scope: 'Current Node.js Extension Host process' };
+  const findings = processAnalyzer.analyze(sample);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].confidence, 'measured');
+  assert.match(findings[0].evidence, /short observation/);
+  assert.match(findings[0].evidence, /cannot identify a specific extension/);
+  assert.deepEqual(processAnalyzer.analyze({ ...sample, cpuPercentOneCore: 70 }), []);
+});
