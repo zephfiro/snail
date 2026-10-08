@@ -21,9 +21,31 @@ export interface ProcessEvidence {
   samplingMs: number;
   scope: string;
 }
+/** A narrow snapshot from public VS Code Extension metadata; no activation is triggered. */
+export interface ExtensionSource {
+  id: unknown;
+  isActive: unknown;
+  displayName?: unknown;
+  version?: unknown;
+  isBuiltin?: unknown;
+  /** VS Code ExtensionKind: 1 = UI, 2 = Workspace. Not an exact host location. */
+  extensionKind?: unknown;
+}
+export interface ExtensionInventoryEntry {
+  id: string;
+  displayName: string;
+  version?: string;
+  isActive: boolean;
+  isBuiltin: boolean;
+  /** Logical extension kind, not necessarily the physical runtime host. */
+  extensionKind: 'ui' | 'workspace' | 'unknown';
+}
 export interface ExtensionsEvidence {
+  /** Number of non-built-in extensions; preserves v0.1 summary semantics. */
   installedExtensions: number;
   activeExtensions: number;
+  builtinExtensions: number;
+  entries: readonly ExtensionInventoryEntry[];
 }
 export interface WorkspaceEvidence {
   scan: ScanResult;
@@ -42,6 +64,8 @@ export interface Report {
   environment: { vscodeVersion: string; platform: string; remote: boolean };
   summary: { installedExtensions: number; activeExtensions: number; scannedEntries: number; limitReached: boolean };
   process?: ProcessEvidence;
+  /** Local-only inventory. Never include in a shared/exported report by default. */
+  extensionInventory?: readonly ExtensionInventoryEntry[];
   findings: Finding[];
   warnings: string[];
   collectors: CollectorRecord[];
@@ -51,7 +75,7 @@ export interface CancellationSignal {
   readonly isCancellationRequested: boolean;
 }
 export interface DiagnosticServices {
-  listExtensions(): readonly { id: string; isActive: boolean }[];
+  listExtensions(): readonly ExtensionSource[];
   workspaceRoot(): { scheme: string; fsPath: string } | undefined;
   watcherExclude(): Readonly<Record<string, boolean>>;
   sampleProcess(cancelled: () => boolean): Promise<ProcessEvidence>;
