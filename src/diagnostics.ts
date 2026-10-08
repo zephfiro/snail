@@ -15,7 +15,10 @@ export async function diagnose(token: vscode.CancellationToken): Promise<Report>
     cancellation: token,
     // A monotonic clock avoids wall-clock adjustments during duration measurement.
     now: () => Number(process.hrtime.bigint()) / 1_000_000,
-    limits: { workspace: { maxEntries: 2500, maxDepth: 5, maxMs: 2000 } },
+    limits: {
+      workspace: { maxEntries: 2500, maxDepth: 5, maxMs: 2000 },
+      collectors: { extensions: 1000, process: 1200, workspace: 2500, settings: 1000 }
+    },
     services: createVSCodeServices()
   });
   return createReport(result, {
