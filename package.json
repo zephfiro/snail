@@ -1,0 +1,45 @@
+{
+  "name": "snail-doctor",
+  "displayName": "Snail Doctor",
+  "description": "Find out what's slowing down your VS Code.",
+  "version": "0.1.0",
+  "publisher": "zephfiro",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.94.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:snail.diagnose",
+    "onCommand:snail.exportReport"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "snail.diagnose",
+        "title": "Snail: Diagnose Performance"
+      },
+      {
+        "command": "snail.exportReport",
+        "title": "Snail: Export Last Report"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outfile=dist/extension.js",
+    "watch": "npm run build -- --watch",
+    "lint": "tsc --noEmit",
+    "test": "node --test test/*.test.cjs",
+    "package": "npm run build && vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.94.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0"
+  }
+}
