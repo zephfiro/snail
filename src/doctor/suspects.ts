@@ -88,8 +88,30 @@ export const watcherConfigurationRule: SuspectRule = {
   }
 };
 
+export const typeScriptLoggingRule: SuspectRule = {
+  id:'tsserver-verbose-logging',
+  evaluate(snapshot, records) {
+    if (!collected(records,'settings')) return;
+    const setting=snapshot.get<SettingsEvidence>('settings');
+    if (setting?.tsServerLogLevel!=='verbose') return;
+    return {
+      id:'tsserver-verbose-logging',
+      title:'TypeScript Server verbose logging is enabled',category:'configuration',
+      hypothesis:'Verbose TypeScript logging may add diagnostic overhead during editor operations.',
+      evidence:[{
+        origin:'settings',source:'inferred',subject:'typescript_server_logging',
+        observation:'typesript.tsserver.log is set to verbose.',
+        limitation:'No tsserver process utilization or added overhead was measured.'
+      }],
+      counterEvidence:['Logging may have negligible impact for this workload.','Slowdowns may be unrelated to TypeScript.'],
+      nextStep:'Use the TypeScript investigation plan; compare the same operation with verbose logging toggled manually, then restore the setting.',
+      status:'suspected',priority:'possible',
+      priorityReason:'Observed configuration only; no independently measured TS Server impact.'
+    };
+  }
+};
 export const DEFAULT_SUSPECT_RULES: readonly SuspectRule[] = [
-  extensionHostRule, watcherConfigurationRule
+  extensionHostRule, watcherConfigurationRule, typeScriptLoggingRule
 ];
 
 /** Pure, deterministic rule executor. No rule may read VS Code APIs or I/O. */
