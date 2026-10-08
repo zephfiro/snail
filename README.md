@@ -6,6 +6,14 @@ Snail Doctor is an open-source, on-demand performance diagnostic extension for V
 
 > Early development — v0.1.0. The public VS Code extension API does **not** provide reliable per-extension CPU or memory usage. Snail will never fabricate those figures.
 
+## VSIX installation
+
+Run `npm install && npm run package` to create `snail-doctor-0.1.0.vsix`. From VS Code, open Extensions (`Ctrl+Shift+X`), choose the `...` menu, click **Install from VSIX...**, and select that file. You can also obtain the package from the most recent successful [GitHub Actions run](https://github.com/zephfiro/snail/actions) as an artifact.
+
+To uninstall, open Extensions, find **Snail Doctor**, and click Uninstall. For a development session instead, open the repository in VS Code and press **F5**.
+
+See [resource budgets and release acceptance](docs/PERFORMANCE.md) for synthetic benchmark and real-workspace verification guidance.
+
 ## Quick start
 
 Requires Node.js 22+, npm and VS Code 1.94+.
