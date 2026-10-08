@@ -14,6 +14,14 @@ To uninstall, open Extensions, find **Snail Doctor**, and click Uninstall. For a
 
 See [resource budgets and release acceptance](docs/PERFORMANCE.md) for synthetic benchmark and real-workspace verification guidance.
 
+## Snail Watch — session-based performance monitoring
+
+Snail Watch is **OFF by default**. Click **Snail Watch: OFF** in the VS Code Status Bar or run **Snail: Start Watch**, then choose a recording duration or **Until I stop** (with a two-hour safety limit). Continue working in VS Code and click **Watch: ON** to stop when done.
+
+Your CPU/RSS history is saved **locally by session**, even when Watch is OFF. Run **Snail: Open Watch Sessions** later to examine charts, spikes, memory trends and missing data; you can also export a session or clear local history. None of this assigns CPU or memory to a specific extension.
+
+See [Snail Watch documentation](docs/WATCH.md) for data scope, persistence, retention, safety limits and commands.
+
 ## Quick start
 
 Requires Node.js 22+, npm and VS Code 1.94+.
