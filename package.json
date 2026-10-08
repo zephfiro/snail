@@ -85,7 +85,7 @@
     ]
   },
   "scripts": {
-    "build": "esbuild src/extension.ts src/diagnostics.ts src/workspace-scan.ts src/report-view.ts src/report-export.ts src/core/index.ts src/doctor/index.ts src/watch/index.ts src/watch/storage.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outdir=dist",
+    "build": "esbuild src/extension.ts src/diagnostics.ts src/workspace-scan.ts src/report-view.ts src/report-export.ts src/core/index.ts src/doctor/index.ts src/watch/index.ts src/watch/storage.ts src/watch/explorer.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outdir=dist",
     "watch": "npm run build -- --watch",
     "lint": "tsc --noEmit",
     "test": "npm run build && npm run test:unit",
