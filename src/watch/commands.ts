@@ -5,6 +5,7 @@ import { createNodeProcessSampleSource } from '../measurements/process';
 import { WatchMonitor } from './monitor';
 import { LocalWatchStorage } from './storage';
 import { renderVillainsExplorer } from './explorer';
+import { currentExtensionMetadata } from './metadata';
 import type { WatchSession } from './types';
 import { MAX_WATCH_DURATION_MS, WATCH_INTERVAL_MS } from './types';
 
@@ -59,14 +60,16 @@ export function registerWatchCommands(context:vscode.ExtensionContext):void {
   });
   context.subscriptions.push({dispose:()=>monitor.dispose()});
 
-  function openAnalysis(session:WatchSession):void {
+  async function openAnalysis(session:WatchSession):Promise<void> {
     const panel=vscode.window.createWebviewPanel(
       'snailWatchSession','Snail Watch · Session Analysis',vscode.ViewColumn.Active,
       {enableScripts:true,localResourceRoots:[]}
     );
     const nonce=randomBytes(16).toString('base64');
+    const knownExtensions=await currentExtensionMetadata();
+    if(!panel.visible)return;
     panel.webview.html=renderVillainsExplorer(session,{
-      nonce,cspSource:panel.webview.cspSource
+      nonce,cspSource:panel.webview.cspSource,knownExtensions
     });
   }
   async function chooseSession(title:string):Promise<WatchSession|undefined> {
@@ -119,7 +122,7 @@ export function registerWatchCommands(context:vscode.ExtensionContext):void {
         'Snail Watch OFF. Session saved locally; no more samples are being recorded.',
         'Analyze now','Later'
       );
-      if(choice==='Analyze now'&&session)openAnalysis(session);
+      if(choice==='Analyze now'&&session)await openAnalysis(session);
     }catch{
       void vscode.window.showErrorMessage('Watch stopped, but the final session could not be saved. Data may be incomplete.');
     }
@@ -133,7 +136,7 @@ export function registerWatchCommands(context:vscode.ExtensionContext):void {
     }),
     vscode.commands.registerCommand('snail.openWatchSessions',async()=>{
       const session=await chooseSession('Snail Watch · saved monitoring sessions');
-      if(session)openAnalysis(session);
+      if(session)await openAnalysis(session);
     }),
     vscode.commands.registerCommand('snail.exportWatchSession',async()=>{
       const session=await chooseSession('Export a Snail Watch session');
