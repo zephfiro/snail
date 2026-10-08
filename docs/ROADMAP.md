@@ -18,5 +18,8 @@
 ## v0.3 — Safe fixes (#9)
 - [ ] Reviewable, reversible settings changes with explicit user consent, tests and rollback.
 
-## v0.4 — Opt-in Watch (#10)
-- [ ] Local-only bounded performance histories and regression detection.
+## v0.4 — Session-based Watch (#10)
+- [x] Explicit Start/Stop and Status Bar indicator; no automatic recording on editor startup.
+- [x] Limited aggregate CPU/RSS samples with gaps, safety cap and per-session local storage.
+- [x] Offline history selection, static timeline, statistical summaries, cautious hypotheses, clearing and manual export.
+- [ ] Validate overhead and user experience on real workspaces before Marketplace release.

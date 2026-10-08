@@ -3,6 +3,7 @@ import { diagnose, Report } from './diagnostics';
 import { renderReport } from './report-view';
 import { createShareableReport } from './report-export';
 import { registerInvestigationCommands } from './doctor/commands';
+import { registerWatchCommands } from './watch/commands';
 
 let latestReport: Report | undefined;
 function show(report: Report): void {
@@ -11,6 +12,7 @@ function show(report: Report): void {
 }
 export function activate(context: vscode.ExtensionContext): void {
   registerInvestigationCommands(context, () => latestReport);
+  registerWatchCommands(context);
   context.subscriptions.push(vscode.commands.registerCommand('snail.diagnose', async () => {
     const report = await vscode.window.withProgress({
       location:vscode.ProgressLocation.Notification, title:'Snail Doctor: diagnosing', cancellable:true
