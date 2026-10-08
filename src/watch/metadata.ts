@@ -3,8 +3,8 @@ import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import type { ExplorerExtensionMetadata } from './explorer';
 
-const LIMIT=80;
-const ICON_LIMIT=128*1024;
+const LIMIT=40;
+const ICON_LIMIT=64*1024;
 const mimeByExt:Record<string,string>={'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp'};
 
 /** A manifest icon must be a relative, normal path within the extension root. */
