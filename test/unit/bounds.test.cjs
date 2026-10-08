@@ -137,7 +137,6 @@ test('virtual-only workspaces are reported as unsupported without attempting sca
 });
 
 test('one timed-out collector does not delay independent collectors', async () => {
-  let trigger;
   let resolveLate;
   let cancelledInWork = false;
   const neverPrompt = new Promise(resolve => { resolveLate = resolve; });
@@ -150,7 +149,7 @@ test('one timed-out collector does not delay independent collectors', async () =
     moduleFor('working', async () => ({ data: 'fine' }))
   ]).run(context({
     scheduleTimeout: (_ms, cb) => {
-      if (!trigger) queueMicrotask(cb);
+      if (_ms === 25) queueMicrotask(cb);
       return () => {};
     },
     limits: { workspace: {}, collectors: { stuck: 25, working: 100 } }
