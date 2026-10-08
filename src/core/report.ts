@@ -2,6 +2,7 @@ import type {
   ExtensionsEvidence, ProcessEvidence, Report, WorkspaceEvidence
 } from './contracts';
 import type { DiagnosticRun } from './runner';
+import { detectSuspects, rankSuspects } from '../doctor/index';
 
 export function createReport(
   run: DiagnosticRun,
@@ -28,6 +29,7 @@ export function createReport(
     ...(extensions?.entries ? { extensionInventory: extensions.entries } : {}),
     findings: run.findings,
     warnings: run.warnings,
-    collectors: run.collectors
+    collectors: run.collectors,
+    suspects: rankSuspects(detectSuspects(run.evidence, run.collectors))
   };
 }
