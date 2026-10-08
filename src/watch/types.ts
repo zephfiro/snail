@@ -1,3 +1,5 @@
+import type { ImportedCpuProfile } from './profile';
+
 export type WatchState = 'recording' | 'completed' | 'interrupted';
 export type WatchSample =
   | { kind: 'measured'; timestamp: string; elapsedMs: number; cpuPercentOneCore: number; rssMiB: number }
@@ -21,6 +23,7 @@ export interface WatchSession {
     scope: 'current-node-extension-host';
   };
   samples: WatchSample[];
+  cpuProfiles?: ImportedCpuProfile[];
 }
 export const WATCH_INTERVAL_MS = 5000;
 export const MAX_WATCH_DURATION_MS = 2 * 60 * 60 * 1000;
@@ -40,6 +43,15 @@ export function isWatchSession(value: unknown): value is WatchSession {
     typeof v.intervalMs === 'number' && v.intervalMs >= 1000 && v.intervalMs <= 60000 &&
     typeof v.maxDurationMs === 'number' && v.maxDurationMs > 0 &&
     Boolean(v.environment) && v.environment?.scope === 'current-node-extension-host' &&
+    (!v.cpuProfiles || (Array.isArray(v.cpuProfiles) && v.cpuProfiles.length <= 3 &&
+      v.cpuProfiles.every(profile => profile.schemaVersion===1 &&
+        profile.source==='v8-cpuprofile-manual' && profile.buckets.length<=600 &&
+        profile.extensions.length<=80 && profile.samples<=200000 &&
+        Number.isFinite(profile.recognizedSamples) &&
+        Number.isFinite(profile.unknownSamples) &&
+        profile.buckets.every(bucket => bucket.samples>0 && bucket.attributed.length<=80 &&
+          bucket.attributed.every(x=>typeof x.id==='string' && x.id.length<=160 &&
+            Number.isSafeInteger(x.samples) && x.samples>0))))) &&
     Array.isArray(v.samples) && v.samples.length <= MAX_WATCH_SAMPLES &&
     v.samples.every(sample => sample && typeof sample === 'object' &&
       typeof sample.timestamp === 'string' && Number.isFinite(Date.parse(sample.timestamp)) &&
