@@ -21,9 +21,23 @@ async function sampleProcess(cancelled: () => boolean): Promise<ProcessEvidence>
 /** The only layer allowed to read VS Code APIs and Node process state. */
 export function createVSCodeServices(): DiagnosticServices {
   return {
-    listExtensions: () => vscode.extensions.all.map(extension => ({
-      id: extension.id, isActive: extension.isActive
-    })),
+    listExtensions: () => vscode.extensions.all.map(extension => {
+      // Copy a small snapshot of public API fields; never call extension.activate().
+      // packageJSON is untyped by VS Code, so the collector validates every field.
+      let manifest: Record<string, unknown> = {};
+      try {
+        if (extension.packageJSON && typeof extension.packageJSON === 'object') {
+          manifest = extension.packageJSON as Record<string, unknown>;
+        }
+      } catch { /* An extension may disappear or expose inaccessible metadata. */ }
+      return {
+        id: extension.id, isActive: extension.isActive,
+        extensionKind: extension.extensionKind,
+        displayName: manifest.displayName,
+        version: manifest.version,
+        isBuiltin: manifest.isBuiltin
+      };
+    }),
     workspaceRoot: () => {
       const root = vscode.workspace.workspaceFolders?.[0];
       return root ? { scheme: root.uri.scheme, fsPath: root.uri.fsPath } : undefined;
