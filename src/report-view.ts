@@ -104,6 +104,7 @@ export function renderReport(report: Report): string {
   <div class="tile"><b>${process ? process.rssMb + ' MB' : 'N/A'}</b>Host process RSS</div></div>
   <p class="muted">CPU: ${process ? escapeHtml(String(process.cpuPercentOneCore)) + '% of one full CPU core over ' + escapeHtml(String(process.samplingMs)) + 'ms' : 'sample unavailable'}. Values above 100% are possible. RSS is a point-in-time process memory snapshot. ${process ? escapeHtml(process.scope) : 'No process metrics were collected.'}</p>
   ${summary.limitReached ? '<p role="status" class="muted">Workspace scan incomplete: findings may be missing.</p>' : ''}
+  <p class="muted">Total diagnosis duration: ${report.durationMs === undefined ? 'N/A' : escapeHtml(String(Math.round(report.durationMs))) + ' ms'}. ${report.budgetExceeded ? 'Total budget reached; some observations are missing.' : ''}</p>
   <h2>Potential performance suspects</h2>
   ${renderSuspects(report)}
   <h2>Findings by evidence quality</h2>${renderGroupedFindings(report)}
