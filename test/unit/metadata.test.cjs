@@ -1,5 +1,9 @@
 const test=require('node:test'),assert=require('node:assert/strict');
-const {validManifestIcon}=require('../../dist/watch/metadata.js');
+const Module=require('node:module');
+const load=Module._load;
+Module._load=function(req,parent,main){return req==='vscode'?{}:load.call(this,req,parent,main)};
+let validManifestIcon;
+try{({validManifestIcon}=require('../../dist/watch/metadata.js'))}finally{Module._load=load}
 test('accepts local raster icon paths only',()=>{
   assert.equal(validManifestIcon('images/icon.png'),true);
   assert.equal(validManifestIcon('assets/image.webp'),true);
