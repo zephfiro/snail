@@ -28,12 +28,14 @@ The existing smoke tests check packaging and manifest invariants; unit tests exe
 
 ## What v0.1.0 diagnoses
 
-- Extension inventory and activation status (not individual CPU/RAM usage).
+- Local-only extension inventory: ID, display name, version (when available), built-in/third-party status, activation and UI/Workspace kind. This is **not** an individual CPU/RAM report.
 - Short, aggregated CPU and RSS snapshot of the current Extension Host process.
 - Bounded workspace directory inspection (names and directory types only; no file contents).
 - Possible file-watching and search-exclusion opportunities, with hypotheses labeled as such.
 - Failures and collection limits, so an incomplete scan is not mistaken for a complete one.
-- Exportable, path-free JSON report through **Snail: Export Last Report**.
+- Exportable JSON report through **Snail: Export Last Report**. Extension IDs, names and versions appear only inside the local Webview and are omitted from the export by default. Other privacy safeguards are tracked in #5.
+
+The inventory is a point-in-time snapshot: changes made by installing, uninstalling or enabling extensions appear in the next diagnosis. The `extensionKind` is the logical UI/Workspace kind exposed by VS Code, **not** a definitive physical extension host location. `isActive` indicates activation, not performance or CPU usage.
 
 ## Architecture
 
