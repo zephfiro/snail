@@ -1,22 +1,22 @@
 # Roadmap
 
-## v0.1 — Doctor (first cut)
-- [x] Command-based report, extension inventory, short host-process sample, bounded workspace scan.
-- [x] Findings with confidence and severity.
-- [x] Script-free results panel and manual sanitized export.
-- [ ] Harden cancellation and per-collector timeouts.
-- [ ] Build automated tests and integration test in Extension Development Host.
-- [ ] Add proper CPU-profile capture when a reliable public path is validated.
+## v0.1 — Snail Doctor MVP
+- [x] On-demand extension inventory, process sample and bounded workspace inspection.
+- [x] Typed independent collectors, rule engine, suspect evidence and deterministic prioritization.
+- [x] Guided investigation (including TypeScript Language Server) and self-reported before/after experiments.
+- [x] Conservative experimental verdicts with privacy-first local storage.
+- [x] Script-free findings panel and allowlisted export.
+- [x] Cooperative cancellation, per-collector deadlines and multi-root scanning.
+- [x] Resource budget instrumentation, synthetic benchmarking and VSIX packaging/installation CI (#13/#14).
+- [ ] Manual real-workspace release acceptance before publishing to Marketplace.
 
-## v0.2 — Investigation
-- [ ] Repeatable before/after measurement sessions.
-- [ ] Investigation flows for language servers and extension conflicts.
-- [ ] Structured root-cause hypotheses and calibrated confidence.
+## v0.2 — Advanced investigation (#8)
+- [ ] Independent process profiling and time-series analysis through supported instrumentation where possible.
+- [ ] Reproducible evidence for particular extension or server with stronger causality checks.
+- [ ] Better experimental designs, controls and calibration of hypothesis confidence.
 
-## v0.3 — Fix
-- [ ] User-reviewed, reversible settings changes.
-- [ ] Verification and rollback.
+## v0.3 — Safe fixes (#9)
+- [ ] Reviewable, reversible settings changes with explicit user consent, tests and rollback.
 
-## v0.4 — Watch
-- [ ] Opt-in, resource-budgeted historical monitoring.
-- [ ] Regression detection without false attribution.
+## v0.4 — Opt-in Watch (#10)
+- [ ] Local-only bounded performance histories and regression detection.

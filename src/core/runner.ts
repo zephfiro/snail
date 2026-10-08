@@ -8,6 +8,8 @@ export interface DiagnosticRun {
   readonly findings: Finding[];
   readonly warnings: string[];
   readonly collectors: CollectorRecord[];
+  readonly durationMs: number;
+  readonly budgetExceeded: boolean;
 }
 
 class Snapshot implements EvidenceSnapshot {
@@ -83,15 +85,19 @@ export class DiagnosticRunner {
   }
 
   async run(context: DiagnosticContext): Promise<DiagnosticRun> {
+    const runStart = context.now();
+    const totalMs = context.limits.totalMs ?? 6500;
     const data = new Map<string, unknown>();
     const warnings: string[] = [];
     const collectors: CollectorRecord[] = [];
     const findings: Finding[] = [];
     let cancelled = false;
+    let budgetExceeded = false;
 
     for (const module of this.modules) {
       if (context.cancellation.isCancellationRequested) cancelled = true;
-      if (cancelled) {
+      if (context.now() - runStart >= totalMs) budgetExceeded = true;
+      if (cancelled || budgetExceeded) {
         collectors.push({ id: module.id, status: 'skipped', durationMs: 0 });
         continue;
       }
@@ -137,6 +143,8 @@ export class DiagnosticRunner {
       }
     }
     if (cancelled) warnings.push('Diagnosis was cancelled; results may be partial.');
-    return { evidence: snapshot, findings, warnings, collectors };
+    if (budgetExceeded) warnings.push('Total diagnosis resource budget reached; remaining collectors were skipped.');
+    return { evidence: snapshot, findings, warnings, collectors,
+      durationMs: Math.max(0, context.now() - runStart), budgetExceeded };
   }
 }

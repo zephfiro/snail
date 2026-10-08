@@ -27,3 +27,25 @@ jobs:
         run: npm run test:unit
       - name: Extension Host integration
         run: xvfb-run -a npm run test:integration
+      - name: On-demand overhead benchmark
+        run: npm run benchmark
+      - name: Package VSIX
+        run: npm run package
+      - name: Inspect VSIX manifest and source exclusions
+        run: |
+          unzip -Z1 snail-doctor-0.1.0.vsix > vsix-contents.txt
+          grep -q '^extension/package.json$' vsix-contents.txt
+          grep -q '^extension/dist/extension.js$' vsix-contents.txt
+          if grep -E '^extension/(src|test|scripts|node_modules|\.github|\.vscode-test)/' vsix-contents.txt; then
+            echo 'Unexpected internal files in VSIX' >&2
+            exit 1
+          fi
+          rm vsix-contents.txt
+      - name: Install VSIX in isolated VS Code profile
+        run: xvfb-run -a node scripts/verify-vsix.cjs
+      - name: Publish test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snail-doctor-vsix
+          path: snail-doctor-0.1.0.vsix
+          retention-days: 14
