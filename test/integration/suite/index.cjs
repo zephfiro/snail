@@ -11,6 +11,11 @@ async function run() {
   assert.ok(commands.includes('snail.diagnose'), 'Diagnosis command is registered');
   assert.ok(commands.includes('snail.exportReport'), 'Report export command is registered');
 
+  assert.ok(commands.includes('snail.investigateTypeScript'));
+  assert.ok(commands.includes('snail.recordBaseline'));
+  assert.ok(commands.includes('snail.recordComparison'));
+  assert.ok(commands.includes('snail.clearExperimentData'));
+  await vscode.commands.executeCommand('snail.investigateTypeScript');
   await vscode.commands.executeCommand('snail.diagnose');
   // The result is a Webview panel. The public API cannot enumerate all Webviews,
   // but the command must complete without throwing under the real Extension Host.

@@ -45,6 +45,17 @@ Workspace enumeration uses `fs.opendir` to stream entries without loading huge d
 
 Virtual workspace roots are skipped; remote `file:` roots are scanned only if accessible from the Extension Host running Snail. Partial scans are shown as incomplete, not as evidence that no problem exists.
 
+## Find and investigate suspects
+
+1. Run **Snail: Diagnose Performance** and review the **Potential performance suspects** section. A suspect is a hypothesis supported by observed evidence, not a confirmed culprit.
+2. Run **Snail: Investigate a Performance Suspect** to choose a current suspect and read a safe, reproducible checklist.
+3. Run **Snail: Investigate TypeScript Language Server** to investigate the built-in TS Server specifically. The Snail Extension Host CPU sample **does not measure tsserver**.
+4. If you want a manual experiment, run **Snail: Record Baseline**. Explicitly consent to workspace-local storage and enter three or more self-timed latencies for an editor action, in milliseconds (e.g. `250,240,260`).
+5. Change exactly one reversible variable outside Snail, repeat the same action, then run **Snail: Record Comparison**. Record the new latencies and whether you reversed the change. Read the comparison report.
+6. Repeat controlled experiments if useful; use **Snail: Clear Experiment Data** to delete stored observations.
+
+No automatic setting edits, file changes, extension disabling, process sampling of tsserver, or logs are performed in this workflow. Self-reported timings may suggest a cause but never produce a **verified** verdict. The experiment store retains only the current baseline and up to **four** recent comparisons within the VS Code workspace state: action type, timings, VS Code version, local/remote flag and folder count. It does **not** save paths, file contents, TypeScript logs or names of internal extensions. Repeating an experiment after a major TypeScript version or load change may not be comparable even when the automatic environment signature matches.
+
 ## Architecture
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PRODUCT.md](docs/PRODUCT.md), and [docs/ROADMAP.md](docs/ROADMAP.md). Contributors can start with [CONTRIBUTING.md](CONTRIBUTING.md).
