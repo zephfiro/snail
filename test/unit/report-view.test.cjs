@@ -83,3 +83,28 @@ test('large inventories are capped in the Webview without losing their total', (
   assert.match(html, /Showing 250 of 265 entries/);
   assert.doesNotMatch(html, /publisher.extension264/);
 });
+
+test('CPU and RSS display show an aggregate sample and its elapsed duration', () => {
+  const html = renderReport({
+    schemaVersion: 1, timestamp: '2026-10-08T00:00:00Z',
+    environment: { vscodeVersion: '1.94', platform: 'linux', remote: false },
+    summary: { installedExtensions: 0, activeExtensions: 0, scannedEntries: 0, limitReached: false },
+    process: { cpuPercentOneCore: 125.6, rssMb: 149.3, samplingMs: 505, scope: 'Current Node.js process; NOT individual extension usage' },
+    findings: [], warnings: [], collectors: []
+  });
+  assert.match(html, /125.6%/);
+  assert.match(html, /149.3 MB/);
+  assert.match(html, /505ms/);
+  assert.match(html, /NOT individual extension usage/);
+});
+test('missing process metrics use explicit N/A rather than fabricating readings', () => {
+  const html = renderReport({
+    schemaVersion: 1, timestamp: '2026-10-08T00:00:00Z',
+    environment: { vscodeVersion: '1.94', platform: 'linux', remote: false },
+    summary: { installedExtensions: 0, activeExtensions: 0, scannedEntries: 0, limitReached: false },
+    findings: [], warnings: [], collectors: [{id:'process',status:'unavailable',durationMs:0}]
+  });
+  assert.match(html, /sample unavailable/);
+  assert.match(html, /Host process CPU/);
+  assert.match(html, /N\/A/);
+});
