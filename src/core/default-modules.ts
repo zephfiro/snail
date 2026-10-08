@@ -6,6 +6,7 @@ import { settingsCollector } from '../collectors/settings';
 import { extensionsAnalyzer } from '../analyzers/extensions';
 import { processAnalyzer } from '../analyzers/process';
 import { workspaceAnalyzer } from '../analyzers/workspace';
+import { settingsAnalyzer } from '../analyzers/settings';
 
 /** Composition root. The runner never needs changing to register another module. */
 export function createDefaultModules(): DiagnosticModule[] {
@@ -13,6 +14,6 @@ export function createDefaultModules(): DiagnosticModule[] {
     defineDiagnostic(extensionsCollector, extensionsAnalyzer),
     defineDiagnostic(processCollector, processAnalyzer),
     defineDiagnostic(workspaceCollector, workspaceAnalyzer),
-    defineDiagnostic(settingsCollector)
+    defineDiagnostic(settingsCollector, settingsAnalyzer)
   ];
 }
