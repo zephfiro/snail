@@ -21,6 +21,18 @@ Snail Watch is **opt-in**. It collects aggregate Node Extension Host process CPU
 
 A slow/delayed timer interval is stored as an explicit **gap**, rather than a fabricated CPU value. Watch does not read workspace files, run shell commands, perform heap snapshots or transmit telemetry. The watch sampler uses process CPU counters, monotonic time and RSS, with no deep profiler.
 
+## Importing extension-associated CPU evidence (opt-in)
+
+Use **Snail: Import CPU Profile for Watch Session** to select an existing, *locally acquired* V8 `.cpuprofile` file. VS Code's **Developer: Show Running Extensions** includes profiling facilities; capture the profile through the supported VS Code UI, then import the file with user consent.
+
+Snail parses V8 `nodes`, `samples`, and `timeDeltas`, and attempts to associate sampled call stacks with the verified roots of **currently installed extensions in this Extension Host environment**. If a stack cannot be associated with a known extension, it stays **unknown**. Profiles captured on another machine, host, workspace or after an extension update may not match paths; this correctly results in no individual series.
+
+The line labeled **CPU profile sample-share** represents *the percentage of sampled stack occurrences attributed to an extension in 500ms profile-relative buckets*. It is **not** a measured percentage of one CPU core, absolute CPU time, or a full Watch session timeline. Profile time zero and Watch time zero are unrelated; their plots have independent scales. A short profile cannot prove a session-long CPU ranking.
+
+Security boundaries: import is manual and local; max file size **8 MiB**, duration **5 minutes**, at most **200k samples**, **100k nodes**, **600 buckets**, and **80 attributed extensions**. The raw profile (including function names, stack URLs and paths) is **never stored** or exported; the session stores only bounded extension IDs, aggregate sample counts, and bucket shares. Session metadata is private local storage and should not be shared blindly. The original profile remains where the user saved it.
+
+Profiles do **not** contain extension-specific RSS/heap ownership. Consequently the RAM chart will continue to show host RSS and mark extension RAM **unavailable** until a genuinely attributable source can be implemented.
+
 ## Lifetime and limits
 
 - **OFF by default**, even after reload. VS Code may activate Snail on startup to display the OFF indicator, but this does not activate polling.

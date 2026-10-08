@@ -151,7 +151,9 @@ function draw(kind){
     const chartTop=grp.top,chartBottom=grp.top+grp.height-26;
     const seriesValues=grp.series.flatMap(s=>s.points.filter(Boolean).map(p=>p.value));
     const min=Math.min(0,...seriesValues),max=Math.max(1,...seriesValues),range=max-min;
-    const x=t=>margin.l+t/maxTime*(w-margin.l-margin.r);
+    // Profile-relative buckets and Watch session wall time have separate origins.
+    const groupTime=Math.max(1,...grp.series.flatMap(s=>s.points.filter(Boolean).map(p=>p.time)));
+    const x=t=>margin.l+t/groupTime*(w-margin.l-margin.r);
     const y=v=>chartBottom-(v-min)/range*(chartBottom-chartTop-15);
     for(let i=0;i<=3;i++){
       const v=min+(max-min)*(i/3);

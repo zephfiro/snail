@@ -21,6 +21,8 @@ async function run() {
   assert.ok(commands.includes('snail.openWatchSessions'));
   assert.ok(commands.includes('snail.exportWatchSession'));
   assert.ok(commands.includes('snail.clearWatchHistory'));
+  assert.ok(commands.includes('snail.importCpuProfile'));
+
   await vscode.commands.executeCommand('snail.investigateTypeScript');
   await vscode.commands.executeCommand('snail.diagnose');
 
