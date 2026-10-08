@@ -1,4 +1,5 @@
 import type { ScanOptions, ScanResult } from '../workspace-scan';
+import type { Suspect } from '../doctor/suspects';
 
 export type Confidence = 'measured' | 'inferred' | 'informational';
 export type Severity = 'info' | 'warning' | 'critical';
@@ -69,6 +70,7 @@ export interface Report {
   findings: Finding[];
   warnings: string[];
   collectors: CollectorRecord[];
+  suspects?: readonly Suspect[];
 }
 
 export interface CancellationSignal {
