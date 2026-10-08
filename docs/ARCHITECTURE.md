@@ -72,6 +72,16 @@ const module = defineDiagnostic(collector, analyzer);
 - Incomplete scans, inaccessible roots, depth caps and timeouts must not be interpreted as a clean health result. The report marks an unsuccessful/timed-out workspace collection as incomplete.
 - Total command time remains influenced by independent collector budgets and synchronous rendering. This version does not establish a strict whole-command SLA; overhead measurement is tracked in #13.
 
+## Guided investigation and manual experiments (#22–#25)
+
+`src/doctor/investigation.ts` contains static, side-effect-free investigation plans for host, watcher, extension, configuration, language-server and workspace suspects. The explicit TypeScript flow differentiates the Node Extension Host from the separate `tsserver`, references only VS Code's supported inspection commands, and never collects logs automatically. `src/doctor/investigation-view.ts` renders plans in a script-free, escaped Webview.
+
+`src/doctor/commands.ts` registers the investigation and manual A/B commands. The VS Code QuickPick and InputBox UI only runs after user action; no timers or processes start at activation. Baseline data is stored **only with explicit confirmation** in `ExtensionContext.workspaceState`, capped to one pending baseline and four past trials. `Snail: Clear Experiment Data` clears both keys. The stored model contains only operation type, observations in milliseconds, timestamps and coarse environment signature (VS Code version, local/remote, folder count); no workspace path or log content.
+
+`src/doctor/experiments.ts` is a deterministic, independent comparison module. All observations need >=3 valid positive repetitions, matching operation, source and coarse environment. Changes are expressed as relative change in **median latency**. Different contexts or multiple interventions are marked **incomparable**. A single improvement produces at most `suspected`; repeated controlled self-reported improvements can produce `likely`, never `verified_by_experiment`. Actual verification would require repeatable, controlled, independently instrumented samples; the current UI **does not offer them**.
+
+`tsserver` logging may include private paths or source code. Snail only gives the native `TypeScript: Open TS Server Log` command as a manual instruction and never imports the log into its data store. The integrated host CPU metric cannot be used to infer `tsserver` CPU.
+
 ## Extension inventory (#11)
 
 The `extensions` collector reads one synchronous snapshot of `vscode.extensions.all` through the `DiagnosticServices` adapter. It copies only the extension ID, activation state, `extensionKind` (UI = 1; Workspace = 2) and a small allowlist of manifest metadata (display name, version, optional built-in flag). It never calls `activate()`, reads extension files or inspects private extension host state.
