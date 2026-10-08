@@ -61,6 +61,16 @@ const module = defineDiagnostic(collector, analyzer);
 - `CollectionUnavailable` is reserved for known, static unsupported-environment messages.
 - The current runner uses *cooperative cancellation*, not hard termination of blocked operations. Per-collector timeout enforcement is tracked in #4.
 
+## Extension inventory (#11)
+
+The `extensions` collector reads one synchronous snapshot of `vscode.extensions.all` through the `DiagnosticServices` adapter. It copies only the extension ID, activation state, `extensionKind` (UI = 1; Workspace = 2) and a small allowlist of manifest metadata (display name, version, optional built-in flag). It never calls `activate()`, reads extension files or inspects private extension host state.
+
+The collector normalizes and sorts entries deterministically (third-party first), rejects invalid/duplicate IDs, and reports the count of skipped entries. It counts non-built-in extensions separately to preserve the original dashboard summary. Built-ins are identified via the manifest's `isBuiltin` boolean when present, falling back to the `vscode.` ID prefix. This fallback may be imperfect for third-party or custom distributions, so it is a **classification heuristic**, not an assertion about extension origin.
+
+A collapsed table in the local Webview exposes name, ID, version, active state, origin and logical extension kind. Up to 250 entries are rendered per diagnosis to cap HTML size, with the total displayed. The JSON export is constructed through `createShareableReport()` using an allowlist and deliberately omits the entire extension inventory (including identifiers/names/versions). It also omits freeform warnings. Additional generic scrubbers belong to #5.
+
+The point-in-time snapshot is not a live subscription; installations, removals and updates are reflected in the **next** user-triggered diagnosis. Missing optional metadata remains unknown rather than being invented. `extensionKind` alone cannot identify the precise physical process or whether an extension is executing locally, remotely or in a web host. The setting `remote.extensionKind` may change its logical kind. See [VS Code Extension API](https://code.visualstudio.com/api/references/vscode-api#Extension) and [Extension Host](https://code.visualstudio.com/api/advanced-topics/extension-host).
+
 ## Measurement boundaries
 
 - `process.cpuUsage()` and `process.memoryUsage()` measure the **current Node process**, not individual extensions.
