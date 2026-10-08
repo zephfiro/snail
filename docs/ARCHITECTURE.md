@@ -71,6 +71,19 @@ A collapsed table in the local Webview exposes name, ID, version, active state, 
 
 The point-in-time snapshot is not a live subscription; installations, removals and updates are reflected in the **next** user-triggered diagnosis. Missing optional metadata remains unknown rather than being invented. `extensionKind` alone cannot identify the precise physical process or whether an extension is executing locally, remotely or in a web host. The setting `remote.extensionKind` may change its logical kind. See [VS Code Extension API](https://code.visualstudio.com/api/references/vscode-api#Extension) and [Extension Host](https://code.visualstudio.com/api/advanced-topics/extension-host).
 
+## Process sampling (#12)
+
+The `process` collector delegates to `sampleCurrentProcess(cancelled, source, sampleMs)` in `src/measurements/process.ts`. The adapter `createNodeProcessSampleSource()` is the **only** place that reads native Node process counters; a small `ProcessSampleSource` interface injects the monotonic clock, CPU counters, RSS byte snapshot and timer for deterministic unit tests.
+
+- **Scope:** the current Node.js process running this VS Code extension, generally the local or remote Node Extension Host. It is **not** all VS Code processes and not a specific extension. Processes spawned separately (such as language servers, renderers, terminals or other Extension Hosts) are excluded.
+- **CPU window:** 500 ms by default. `process.cpuUsage(start)` returns `user + system` CPU time in microseconds. `process.hrtime.bigint()` measures elapsed monotonic wall time in nanoseconds. The formula is `CPU% of one core = ((userUs + systemUs) / (elapsedMs * 1000)) * 100`. The resulting value may legitimately exceed 100% when multiple threads use more than one core; **do not clamp it**.
+- **Memory:** `process.memoryUsage().rss` is a point-in-time resident set size, converted from bytes to MiB (labeled MB in the existing UI for compatibility). It is not a heap total, per-extension memory consumption or the memory of child processes.
+- **Interpretation:** a high CPU sample is labeled as a *measured short observation*; it is not proof of sustained slowdown or extension attribution. The UI always shows the sample duration, its process-only scope and an explicit unavailable state.
+- **Cancellation:** the 500 ms window sleeps in chunks of at most 50 ms and checks cooperative cancellation. The runner marks cancelled samples `skipped`, not `failed`. Other collector failures remain isolated. More comprehensive per-collector time budgets are part of #4.
+- **Unavailability:** absent process APIs yield `CollectionUnavailable`. Unexpected errors or invalid counters are reported as generic collection failures, without paths or exception messages.
+
+In local desktop extension hosts and remote Node hosts, Node process readings are usually available but describe **the host where Snail is executing**, which may not be the UI host. Web extension hosts cannot assume Node process APIs and may require a different adapter. In the Extension Development Host, results represent a **development/test process**, not the user's normal workload. No background sampling or remote data transmission is introduced.
+
 ## Measurement boundaries
 
 - `process.cpuUsage()` and `process.memoryUsage()` measure the **current Node process**, not individual extensions.
