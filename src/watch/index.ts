@@ -7,3 +7,6 @@ export { WatchMonitor } from './monitor';
 export { renderWatchAnalysis } from './view';
 export type { WatchClock, WatchMonitorConfig } from './monitor';
 export type { WatchStorage } from './storage';
+
+export { renderVillainsExplorer, seriesColor } from './explorer';
+export type { ExplorerSeries, ExplorerOptions } from './explorer';
