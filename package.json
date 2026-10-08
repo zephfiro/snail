@@ -13,7 +13,12 @@
   ],
   "activationEvents": [
     "onCommand:snail.diagnose",
-    "onCommand:snail.exportReport"
+    "onCommand:snail.exportReport",
+    "onCommand:snail.investigateSuspect",
+    "onCommand:snail.investigateTypeScript",
+    "onCommand:snail.recordBaseline",
+    "onCommand:snail.recordComparison",
+    "onCommand:snail.clearExperimentData"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -25,6 +30,26 @@
       {
         "command": "snail.exportReport",
         "title": "Snail: Export Last Report"
+      },
+      {
+        "command": "snail.investigateSuspect",
+        "title": "Snail: Investigate a Performance Suspect"
+      },
+      {
+        "command": "snail.investigateTypeScript",
+        "title": "Snail: Investigate TypeScript Language Server"
+      },
+      {
+        "command": "snail.recordBaseline",
+        "title": "Snail: Record Baseline"
+      },
+      {
+        "command": "snail.recordComparison",
+        "title": "Snail: Record Comparison"
+      },
+      {
+        "command": "snail.clearExperimentData",
+        "title": "Snail: Clear Experiment Data"
       }
     ]
   },
