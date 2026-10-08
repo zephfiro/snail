@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { diagnose, Report } from './diagnostics';
 import { renderReport } from './report-view';
+import { createShareableReport } from './report-export';
 
 let latestReport: Report | undefined;
 function show(report: Report): void {
@@ -19,8 +20,8 @@ export function activate(context: vscode.ExtensionContext): void {
     if (!latestReport) { void vscode.window.showInformationMessage('Run Snail: Diagnose Performance first.'); return; }
     const uri = await vscode.window.showSaveDialog({filters:{'JSON':['json']},saveLabel:'Export diagnostic report'});
     if (!uri) return;
-    // Reports contain no file paths and no file contents. Warnings may contain system errors; omit them from export.
-    const safe: Report = {...latestReport, warnings: []};
+    // The inventory includes potentially private extension identifiers and remains local to the panel.
+    const safe = createShareableReport(latestReport);
     await vscode.workspace.fs.writeFile(uri, Buffer.from(JSON.stringify(safe, null, 2), 'utf8'));
     void vscode.window.showInformationMessage('Snail Doctor report exported.');
   }));

@@ -22,6 +22,7 @@ export function createReport(
       limitReached: workspace?.scan.limitReached ?? false
     },
     ...(process ? { process } : {}),
+    ...(extensions?.entries ? { extensionInventory: extensions.entries } : {}),
     findings: run.findings,
     warnings: run.warnings,
     collectors: run.collectors
