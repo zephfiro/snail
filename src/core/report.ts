@@ -30,6 +30,8 @@ export function createReport(
     findings: run.findings,
     warnings: run.warnings,
     collectors: run.collectors,
+    durationMs: run.durationMs,
+    budgetExceeded: run.budgetExceeded,
     suspects: rankSuspects(detectSuspects(run.evidence, run.collectors))
   };
 }
