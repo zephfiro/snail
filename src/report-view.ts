@@ -51,6 +51,16 @@ export function renderInventory(report: Report): string {
     table + '</details>';
 }
 
+export function renderSuspects(report: Report): string {
+  const suspects = report.suspects ?? [];
+  if (!suspects.length) return '<p class="muted">No actionable suspects from available evidence. This does not prove the workspace is fast or healthy.</p>';
+  return suspects.map(item => '<article><h3>' + escapeHtml(item.title) + '</h3>' +
+    '<div class="meta">' + escapeHtml(item.priority.replace(/_/g, ' ')) + ' · ' + escapeHtml(item.category) + ' · ' + escapeHtml(item.status) + '</div>' +
+    '<p>' + escapeHtml(item.hypothesis) + '</p><p><strong>Evidence:</strong> ' +
+    item.evidence.map(e => escapeHtml(e.observation + ' ' + e.limitation)).join('; ') +
+    '</p><p><strong>Why this priority:</strong> ' + escapeHtml(item.priorityReason) +
+    '</p><p><strong>Next step:</strong> ' + escapeHtml(item.nextStep) + '</p></article>').join('');
+}
 export function renderReport(report: Report): string {
   const { summary, process } = report;
   const warnings = report.warnings.length
@@ -74,6 +84,8 @@ export function renderReport(report: Report): string {
   <div class="tile"><b>${process ? process.rssMb + ' MB' : 'N/A'}</b>Host process RSS</div></div>
   <p class="muted">CPU: ${process ? escapeHtml(String(process.cpuPercentOneCore)) + '% of one full CPU core over ' + escapeHtml(String(process.samplingMs)) + 'ms' : 'sample unavailable'}. Values above 100% are possible. RSS is a point-in-time process memory snapshot. ${process ? escapeHtml(process.scope) : 'No process metrics were collected.'}</p>
   ${summary.limitReached ? '<p class="muted">Workspace scan incomplete: findings may be missing.</p>' : ''}
+  <h2>Potential performance suspects</h2>
+  ${renderSuspects(report)}
   <h2>Findings</h2>${report.findings.map(renderFinding).join('')}
   ${renderInventory(report)}
   <h2>Collection limitations</h2><p>The VS Code API cannot directly report individual extensions' CPU or memory.
