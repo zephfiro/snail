@@ -6,6 +6,7 @@ import { WatchMonitor } from './monitor';
 import { LocalWatchStorage } from './storage';
 import { renderVillainsExplorer } from './explorer';
 import { currentExtensionMetadata } from './metadata';
+import { importCpuProfile, profileSeries, MAX_PROFILE_BYTES } from './profile';
 import type { WatchSession } from './types';
 import { MAX_WATCH_DURATION_MS, WATCH_INTERVAL_MS } from './types';
 
@@ -68,8 +69,10 @@ export function registerWatchCommands(context:vscode.ExtensionContext):void {
     const nonce=randomBytes(16).toString('base64');
     const knownExtensions=await currentExtensionMetadata();
     if(!panel.visible)return;
+    const profile=session.cpuProfiles?.at(-1);
     panel.webview.html=renderVillainsExplorer(session,{
-      nonce,cspSource:panel.webview.cspSource,knownExtensions
+      nonce,cspSource:panel.webview.cspSource,knownExtensions,
+      cpuSeries:profile?profileSeries(profile):[]
     });
   }
   async function chooseSession(title:string):Promise<WatchSession|undefined> {
@@ -148,6 +151,43 @@ export function registerWatchCommands(context:vscode.ExtensionContext):void {
       if(!uri)return;
       await vscode.workspace.fs.writeFile(uri,Buffer.from(JSON.stringify(shareableSession(session),null,2),'utf8'));
       void vscode.window.showInformationMessage('Snail Watch session exported locally. Review before sharing.');
+    }),
+    vscode.commands.registerCommand('snail.importCpuProfile',async()=>{
+      const session=await chooseSession('Choose a saved session for the CPU profile');
+      if(!session)return;
+      const permission=await vscode.window.showWarningMessage(
+        'A CPU profile can contain private paths and functions. Snail will parse it locally, save only known extension IDs and numeric aggregates, and will NOT store the raw profile. The profile may come from a different time than this Watch session. Continue?',
+        {modal:true},'Import CPU Profile'
+      );
+      if(permission!=='Import CPU Profile')return;
+      const selected=await vscode.window.showOpenDialog({
+        title:'Import V8 CPU profile (.cpuprofile)',
+        canSelectMany:false,canSelectFolders:false,canSelectFiles:true,
+        filters:{'V8 CPU profile':['cpuprofile','json']}
+      });
+      if(!selected?.length)return;
+      try{
+        const uri=selected[0];
+        const stat=await vscode.workspace.fs.stat(uri);
+        if(stat.size>MAX_PROFILE_BYTES)throw new Error('Profile exceeds 8 MiB safety limit');
+        const raw=await vscode.workspace.fs.readFile(uri);
+        if(raw.byteLength>MAX_PROFILE_BYTES)throw new Error('Profile exceeds 8 MiB safety limit');
+        const roots=vscode.extensions.all.filter(e=>e.extensionUri.scheme==='file')
+          .map(e=>({id:e.id,rootPath:e.extensionUri.fsPath}));
+        const profile=importCpuProfile(JSON.parse(Buffer.from(raw).toString('utf8')),
+          roots,new Date().toISOString());
+        const next={...session,cpuProfiles:[...(session.cpuProfiles??[]),profile].slice(-3)};
+        if(Buffer.byteLength(JSON.stringify(next),'utf8')>900000)throw new Error('Attribution metadata exceeds session limit');
+        await store.save(next);
+        const known=profile.extensions.length;
+        void vscode.window.showInformationMessage(
+          'Imported profile: '+profile.recognizedSamples+' of '+profile.samples+
+          ' CPU samples linked to '+known+' extension IDs. This is sample share, NOT CPU core %.',
+          'View session'
+        ).then(value=>{if(value==='View session')void openAnalysis(next);});
+      }catch{
+        void vscode.window.showErrorMessage('Could not import CPU profile. Use a valid V8 .cpuprofile (up to 8 MiB, 5 minutes) from the same environment. No raw data was saved.');
+      }
     }),
     vscode.commands.registerCommand('snail.clearWatchHistory',async()=>{
       if(monitor.active){
