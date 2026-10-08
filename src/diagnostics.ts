@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
+import { scanWorkspace } from './workspace-scan';
 import * as os from 'node:os';
 
 export type Confidence = 'measured' | 'inferred' | 'informational';
@@ -22,39 +21,6 @@ export interface Report {
   process?: { cpuPercentOneCore: number; rssMb: number; samplingMs: number; scope: string };
   findings: Finding[];
   warnings: string[];
-}
-export interface ScanResult { entries: number; limitReached: boolean; candidates: string[] }
-const MAX_ENTRIES = 2500;
-const MAX_DEPTH = 5;
-const MAX_MS = 2000;
-const SKIP = new Set(['.git', 'node_modules', '.next', 'dist', 'build', 'vendor', '.venv', 'coverage']);
-const CANDIDATES = new Set(['node_modules', '.next', 'dist', 'build', 'vendor', '.venv', 'coverage']);
-
-export async function scanWorkspace(folder: string, cancelled: () => boolean): Promise<ScanResult> {
-  const deadline = Date.now() + MAX_MS;
-  const stack: Array<{ dir: string; depth: number }> = [{dir: folder, depth: 0}];
-  const result: ScanResult = {entries: 0, limitReached: false, candidates: []};
-  while (stack.length > 0) {
-    if (cancelled()) throw new Error('Scan cancelled');
-    if (Date.now() >= deadline || result.entries >= MAX_ENTRIES) { result.limitReached = true; break; }
-    const current = stack.pop()!;
-    let dirents: import('node:fs').Dirent[];
-    try { dirents = await fs.readdir(current.dir, { withFileTypes: true }); }
-    catch { continue; }
-    for (const entry of dirents) {
-      if (cancelled()) throw new Error('Scan cancelled');
-      if (Date.now() >= deadline || result.entries >= MAX_ENTRIES) { result.limitReached = true; break; }
-      result.entries++;
-      if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
-      if (CANDIDATES.has(entry.name) && !result.candidates.includes(entry.name)) result.candidates.push(entry.name);
-      if (current.depth < MAX_DEPTH && !SKIP.has(entry.name)) {
-        stack.push({dir: path.join(current.dir, entry.name), depth: current.depth + 1});
-      }
-    }
-    if (result.limitReached) break;
-  }
-  if (stack.length > 0) result.limitReached = true;
-  return result;
 }
 export async function sampleProcess(cancelled: () => boolean): Promise<Report['process']> {
   if (cancelled()) throw new Error('Cancelled');
@@ -90,6 +56,7 @@ export async function diagnose(token: vscode.CancellationToken): Promise<Report>
       const scan = await scanWorkspace(root.uri.fsPath, () => token.isCancellationRequested);
       report.summary.scannedEntries = scan.entries;
       report.summary.limitReached = scan.limitReached;
+      if (scan.skippedDirectories > 0) warnings.push(`Could not read ${scan.skippedDirectories} directories; workspace scan is partial.`);
       if (scan.candidates.length) {
         const watches = vscode.workspace.getConfiguration('files').get<Record<string, boolean>>('watcherExclude') ?? {};
         const missing = scan.candidates.filter(c => !Object.entries(watches).some(([pattern, enabled]) => enabled && pattern.includes(c)));

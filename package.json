@@ -29,17 +29,20 @@
     ]
   },
   "scripts": {
-    "build": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outfile=dist/extension.js",
+    "build": "esbuild src/extension.ts src/diagnostics.ts src/workspace-scan.ts src/report-view.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --outdir=dist",
     "watch": "npm run build -- --watch",
     "lint": "tsc --noEmit",
-    "test": "node --test test/*.test.cjs",
-    "package": "npm run build && vsce package"
+    "test": "npm run build && npm run test:unit",
+    "package": "npm run build && vsce package",
+    "test:unit": "node --test test/smoke.test.cjs test/unit/*.test.cjs",
+    "test:integration": "node test/integration/run.cjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.94.0",
     "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.25.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "@vscode/test-electron": "^2.5.2"
   }
 }
