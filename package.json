@@ -58,9 +58,10 @@
     "watch": "npm run build -- --watch",
     "lint": "tsc --noEmit",
     "test": "npm run build && npm run test:unit",
-    "package": "npm run build && vsce package",
+    "package": "npm run build && vsce package --no-dependencies",
     "test:unit": "node --test test/smoke.test.cjs test/unit/*.test.cjs",
-    "test:integration": "node test/integration/run.cjs"
+    "test:integration": "node test/integration/run.cjs",
+    "benchmark": "npm run build && node scripts/benchmark.cjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -69,5 +70,13 @@
     "esbuild": "^0.25.0",
     "typescript": "^5.7.0",
     "@vscode/test-electron": "^2.5.2"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zephfiro/snail.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zephfiro/snail/issues"
+  },
+  "homepage": "https://github.com/zephfiro/snail#readme"
 }
