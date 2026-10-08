@@ -74,6 +74,9 @@ export interface Report {
   warnings: string[];
   collectors: CollectorRecord[];
   suspects?: readonly Suspect[];
+  /** Measured total elapsed wall time for the on-demand run. */
+  durationMs?: number;
+  budgetExceeded?: boolean;
 }
 
 export interface CancellationSignal {
@@ -98,6 +101,7 @@ export interface DiagnosticContext {
   readonly limits: {
     readonly workspace: ScanOptions;
     readonly collectors?: Readonly<Record<string, number>>;
+    readonly totalMs?: number;
   };
   /** Test seam: schedule a deadline and return a cleanup function. */
   readonly scheduleTimeout?: (ms: number, trigger: () => void) => () => void;
