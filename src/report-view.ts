@@ -61,6 +61,26 @@ export function renderSuspects(report: Report): string {
     '</p><p><strong>Why this priority:</strong> ' + escapeHtml(item.priorityReason) +
     '</p><p><strong>Next step:</strong> ' + escapeHtml(item.nextStep) + '</p></article>').join('');
 }
+export function renderGroupedFindings(report: Report): string {
+  const groups = [
+    {confidence:'measured',label:'Measured observations'},
+    {confidence:'inferred',label:'Hypotheses and inferred findings'},
+    {confidence:'informational',label:'Environment information'}
+  ] as const;
+  const sections=groups.map(group=>{
+    const findings=report.findings.filter(item=>item.confidence===group.confidence);
+    if(!findings.length)return '';
+    return '<section aria-label="'+group.label+'"><h3>'+group.label+'</h3>'+
+      findings.map(renderFinding).join('')+'</section>';
+  }).join('');
+  return sections || '<p class="muted">No findings from available evidence; this does not prove the workspace is healthy.</p>';
+}
+export function renderCollectorStatuses(report: Report): string {
+  const items=(report.collectors??[]).map(item =>
+    '<li><strong>'+escapeHtml(item.id)+'</strong>: '+escapeHtml(item.status)+
+    ' ('+escapeHtml(String(item.durationMs))+'ms)</li>').join('');
+  return items?'<details><summary>Collection status and runtime</summary><ul>'+items+'</ul></details>':'';
+}
 export function renderReport(report: Report): string {
   const { summary, process } = report;
   const warnings = report.warnings.length
@@ -83,10 +103,12 @@ export function renderReport(report: Report): string {
   <div class="tile"><b>${process ? process.cpuPercentOneCore + '%' : 'N/A'}</b>Host process CPU (one core)</div>
   <div class="tile"><b>${process ? process.rssMb + ' MB' : 'N/A'}</b>Host process RSS</div></div>
   <p class="muted">CPU: ${process ? escapeHtml(String(process.cpuPercentOneCore)) + '% of one full CPU core over ' + escapeHtml(String(process.samplingMs)) + 'ms' : 'sample unavailable'}. Values above 100% are possible. RSS is a point-in-time process memory snapshot. ${process ? escapeHtml(process.scope) : 'No process metrics were collected.'}</p>
-  ${summary.limitReached ? '<p class="muted">Workspace scan incomplete: findings may be missing.</p>' : ''}
+  ${summary.limitReached ? '<p role="status" class="muted">Workspace scan incomplete: findings may be missing.</p>' : ''}
   <h2>Potential performance suspects</h2>
   ${renderSuspects(report)}
-  <h2>Findings</h2>${report.findings.map(renderFinding).join('')}
+  <h2>Findings by evidence quality</h2>${renderGroupedFindings(report)}
+  <p class="muted">To investigate a hypothesis, use Command Palette → Snail: Investigate a Performance Suspect. TypeScript has a dedicated guided investigation.</p>
+  ${renderCollectorStatuses(report)}
   ${renderInventory(report)}
   <h2>Collection limitations</h2><p>The VS Code API cannot directly report individual extensions' CPU or memory.
   Process readings are aggregate samples and cannot be treated as per-extension figures.
