@@ -13,13 +13,18 @@ Requires Node.js 22+, npm and VS Code 1.94+.
 ```bash
 npm install
 npm run build
-npm test
 npm run lint
+npm test
+npm run test:integration
 ```
+
+Unit tests run with Node's built-in test runner. The integration suite uses `@vscode/test-electron`, which downloads a VS Code test build on its first execution and launches a real Extension Development Host. On headless Linux, run `xvfb-run -a npm run test:integration`. CI runs build, typecheck, unit tests and Extension Host integration on each pull request.
 
 Open the folder in VS Code, press **F5** to launch the Extension Development Host, and run **Snail: Diagnose Performance** from the Command Palette.
 
 The initial version collects evidence only when explicitly invoked. It does not disable extensions, modify settings, transmit telemetry, inspect file contents or run arbitrary shell commands.
+
+The existing smoke tests check packaging and manifest invariants; unit tests exercise bounded scanning, HTML escaping, confidence labels, failures and diagnosis results. The integration suite checks command registration, extension activation and diagnosis execution in a real VS Code host.
 
 ## What v0.1.0 diagnoses
 
